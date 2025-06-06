@@ -1,0 +1,9 @@
+streamlit
+flask
+beautifulsoup4
+requests
+fpdf
+python-dotenv
+tweepy
+schedule
+apscheduler
