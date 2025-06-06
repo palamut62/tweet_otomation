@@ -255,5 +255,109 @@ def main():
     # Zamanlayıcıyı başlat
     scheduler.start_scheduler()
 
+def run_automation_once():
+    """Streamlit için tek seferlik otomatik işlem"""
+    try:
+        scheduler = AutoTweetScheduler()
+        
+        if not scheduler.api_key:
+            return {
+                "success": False,
+                "message": "API anahtarı bulunamadı"
+            }
+        
+        # Çalışma saatleri kontrolü
+        if not scheduler.check_working_hours():
+            return {
+                "success": False,
+                "message": "Çalışma saatleri dışında"
+            }
+        
+        # Tekrarlanan makaleleri temizle
+        cleaned_count = check_duplicate_articles()
+        
+        # Yeni makaleleri çek
+        articles = fetch_latest_ai_articles()
+        
+        if not articles:
+            return {
+                "success": False,
+                "message": "Yeni makale bulunamadı",
+                "cleaned_articles": cleaned_count
+            }
+        
+        # Sadece yeni makaleleri işle
+        new_articles = [a for a in articles if not a.get('already_posted', False)]
+        
+        if not new_articles:
+            return {
+                "success": False,
+                "message": "Tüm makaleler daha önce paylaşılmış",
+                "total_articles": len(articles),
+                "cleaned_articles": cleaned_count
+            }
+        
+        # Maksimum makale sayısını sınırla
+        if len(new_articles) > scheduler.max_articles_per_run:
+            new_articles = new_articles[:scheduler.max_articles_per_run]
+        
+        processed_count = 0
+        pending_count = 0
+        posted_count = 0
+        
+        for article in new_articles:
+            try:
+                # Makale skorunu hesapla
+                score = score_article(article["content"], scheduler.api_key)
+                
+                # Minimum skor kontrolü
+                if score < scheduler.min_score:
+                    continue
+                
+                # Tweet oluştur
+                tweet_text = generate_ai_tweet_with_content(article, scheduler.api_key)
+                
+                if "oluşturulamadı" in tweet_text:
+                    continue
+                
+                # Paylaşım stratejisi
+                if scheduler.auto_post_enabled and not scheduler.require_manual_approval:
+                    # Direkt otomatik paylaş
+                    result = post_tweet(tweet_text)
+                    
+                    if result["success"]:
+                        mark_article_as_posted(article, result)
+                        posted_count += 1
+                else:
+                    # Manuel onay için kaydet
+                    scheduler.save_pending_tweet(article, tweet_text, score)
+                    pending_count += 1
+                
+                processed_count += 1
+                
+                # Rate limiting
+                if scheduler.rate_limit_delay > 0:
+                    time.sleep(scheduler.rate_limit_delay)
+                
+            except Exception as e:
+                print(f"[ERROR] Makale işleme hatası: {e}")
+                continue
+        
+        return {
+            "success": True,
+            "message": f"{processed_count} makale işlendi",
+            "new_articles": len(new_articles),
+            "processed_articles": processed_count,
+            "pending_tweets": pending_count,
+            "posted_tweets": posted_count,
+            "cleaned_articles": cleaned_count
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Hata: {str(e)}"
+        }
+
 if __name__ == "__main__":
     main() 

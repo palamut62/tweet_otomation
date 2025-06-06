@@ -2,10 +2,13 @@
   "auto_mode": true,
   "min_score": 5,
   "check_interval_hours": 2,
-  "auto_post_enabled": false,
-  "require_manual_approval": true,
-  "working_hours_only": false,
-  "rate_limit_delay": 1,
   "max_articles_per_run": 3,
-  "last_updated": "2025-06-06T18:51:47.719145"
+  "auto_post_enabled": true,
+  "require_manual_approval": false,
+  "working_hours_only": false,
+  "working_hours_start": "09:00",
+  "working_hours_end": "18:00",
+  "weekend_enabled": true,
+  "rate_limit_delay": 2.0,
+  "last_updated": "2025-06-06T19:07:51.398500"
 }

@@ -195,75 +195,59 @@ def openrouter_call(prompt, api_key, max_tokens=100):
         return "Bağlantı hatası"
 
 def generate_ai_tweet_with_content(article_data, api_key):
-    """Makale içeriğini okuyarak gelişmiş tweet oluşturma"""
+    """Makale içeriğini okuyarak gelişmiş tweet oluşturma - İngilizce, 35 kelime"""
     title = article_data.get("title", "")
     content = article_data.get("content", "")
     url = article_data.get("url", "")
     
-    # Eğer içerik yoksa başlık kullan
-    if not content:
-        content = title
-    
-    prompt = f"""Aşağıdaki AI/teknoloji haberinden etkileyici bir tweet oluştur:
+    # İngilizce tweet için prompt
+    prompt = f"""Create an engaging English tweet about this AI/tech news article. 
 
-Başlık: {title}
-İçerik: {content[:1200]}
+Article Title: {title}
+Article Content: {content[:1000]}
 
-Tweet Gereksinimleri:
-- Maksimum 200 karakter (URL için yer bırak)
-- Türkçe olsun
-- İlgi çekici emoji kullan
-- Relevant hashtag'ler ekle (#AI #Teknoloji #YapayZeka)
-- Ana konuyu vurgula
-- Merak uyandırıcı olsun
-- Sadece tweet metnini döndür, başka açıklama yapma
+Requirements:
+- Write in English only
+- Exactly 35 words (excluding the URL link)
+- Include relevant emojis
+- Make it engaging and informative
+- Focus on the key innovation or impact
+- Use hashtags like #AI #Tech #Innovation
+- Do NOT include the URL in the word count
 
-Tweet:"""
-    
+Tweet (exactly 35 words):"""
+
     try:
-        generated_tweet = openrouter_call(prompt, api_key, max_tokens=150)
+        tweet_text = openrouter_call(prompt, api_key, max_tokens=150)
         
-        # API hatası kontrolü
-        if not generated_tweet or generated_tweet in ["Özet oluşturulamadı", "API hatası", "Bağlantı hatası", "API anahtarı eksik", "Yanıt formatı hatalı"]:
-            # Fallback tweet oluştur
-            print(f"[FALLBACK] API hatası, fallback tweet oluşturuluyor...")
-            generated_tweet = create_fallback_tweet(title, content)
-        elif len(generated_tweet.strip()) < 10:
-            # Çok kısa yanıt
-            print(f"[FALLBACK] Çok kısa yanıt, fallback tweet oluşturuluyor...")
-            generated_tweet = create_fallback_tweet(title, content)
-        
-        # URL'yi tweet'e ekle
-        if url and url != "#":
-            # Tweet uzunluğunu kontrol et
-            max_tweet_length = 250  # URL için yer bırak
-            if len(generated_tweet) > max_tweet_length:
-                generated_tweet = generated_tweet[:max_tweet_length-3] + "..."
+        if tweet_text and len(tweet_text.strip()) > 10:
+            # URL'yi ekle
+            final_tweet = f"{tweet_text.strip()}\n\n🔗 {url}"
             
-            final_tweet = f"{generated_tweet}\n\n🔗 {url}"
+            # Kelime sayısını kontrol et (URL hariç)
+            word_count = len(tweet_text.strip().split())
+            print(f"[DEBUG] Tweet oluşturuldu: {word_count} kelime")
+            
+            return final_tweet
         else:
-            final_tweet = generated_tweet
+            print("[FALLBACK] API yanıtı yetersiz, fallback tweet oluşturuluyor...")
+            return create_fallback_tweet(title, content, url)
             
-        return final_tweet
-        
     except Exception as e:
         print(f"Tweet oluşturma hatası: {e}")
-        # Hata durumunda fallback tweet oluştur
-        fallback_tweet = create_fallback_tweet(title, content)
-        if url and url != "#":
-            fallback_tweet += f"\n\n🔗 {url}"
-        return fallback_tweet
+        print("[FALLBACK] API hatası, fallback tweet oluşturuluyor...")
+        return create_fallback_tweet(title, content, url)
 
-def create_fallback_tweet(title, content):
-    """API hatası durumunda fallback tweet oluştur"""
+def create_fallback_tweet(title, content, url=""):
+    """API hatası durumunda fallback tweet oluştur - İngilizce, 35 kelime"""
     try:
-        # Başlığı temizle ve kısalt
+        # Başlığı temizle
         clean_title = title.strip()
         
         # İçerikten anahtar kelimeler ve önemli bilgiler çıkar
         keywords = []
-        ai_keywords = ["AI", "yapay zeka", "artificial intelligence", "machine learning", "deep learning", "neural", "GPT", "LLM", "model", "algorithm", "ChatGPT", "OpenAI", "Google", "Microsoft", "Meta", "Anthropic"]
-        tech_keywords = ["teknoloji", "technology", "software", "platform", "startup", "company", "billion", "million", "funding", "investment", "acquisition", "launch", "release"]
+        ai_keywords = ["AI", "artificial intelligence", "machine learning", "deep learning", "neural", "GPT", "LLM", "model", "algorithm", "ChatGPT", "OpenAI", "Google", "Microsoft", "Meta", "Anthropic"]
+        tech_keywords = ["technology", "software", "platform", "startup", "company", "billion", "million", "funding", "investment", "acquisition", "launch", "release"]
         
         content_lower = content.lower()
         title_lower = title.lower()
@@ -278,16 +262,16 @@ def create_fallback_tweet(title, content):
         # Teknoloji anahtar kelimeleri kontrol et
         for keyword in tech_keywords:
             if keyword.lower() in combined_text:
-                keywords.append("Teknoloji")
+                keywords.append("Tech")
                 break
         
         # Sayısal bilgileri çıkar (milyar, milyon, yüzde vb.)
         import re
-        numbers = re.findall(r'\$?(\d+(?:\.\d+)?)\s*(billion|million|milyar|milyon|%|percent)', combined_text, re.IGNORECASE)
+        numbers = re.findall(r'\$?(\d+(?:\.\d+)?)\s*(billion|million|%|percent)', combined_text, re.IGNORECASE)
         
         # Şirket isimlerini tespit et
         companies = []
-        company_names = ["OpenAI", "Google", "Microsoft", "Meta", "Apple", "Amazon", "Tesla", "Nvidia", "Anthropic", "Perplexity", "Cursor", "DeviantArt"]
+        company_names = ["OpenAI", "Google", "Microsoft", "Meta", "Apple", "Amazon", "Tesla", "Nvidia", "Anthropic", "Perplexity", "Cursor", "DeviantArt", "AMD", "Intel"]
         for company in company_names:
             if company.lower() in combined_text:
                 companies.append(company)
@@ -303,103 +287,136 @@ def create_fallback_tweet(title, content):
             emoji = "🔬"
         elif "security" in combined_text or "government" in combined_text:
             emoji = "🔒"
+        elif "acquisition" in combined_text or "acqui-hire" in combined_text:
+            emoji = "🤝"
+        elif "queries" in combined_text or "search" in combined_text:
+            emoji = "🔍"
         else:
             import random
             emojis = ["🤖", "💻", "🚀", "⚡", "🔥", "💡", "🌟", "📱", "🎯", "💰"]
             emoji = random.choice(emojis)
         
-        # Tweet içeriği oluştur
-        tweet_parts = []
+        # İngilizce tweet içeriği oluştur (35 kelime hedefi)
+        tweet_words = []
         
-        # Başlık (kısaltılmış)
-        if len(clean_title) > 120:
-            clean_title = clean_title[:117] + "..."
+        # Emoji ile başla
+        tweet_words.append(emoji)
         
-        # Ana tweet metni
-        main_text = f"{emoji} {clean_title}"
-        
-        # Ek bilgiler ekle
-        if numbers:
-            # En büyük sayıyı al
-            largest_num = max(numbers, key=lambda x: float(x[0]))
-            if largest_num[1].lower() in ['billion', 'milyar']:
-                main_text += f" - {largest_num[0]} milyar dolarlık gelişme!"
-            elif largest_num[1].lower() in ['million', 'milyon']:
-                main_text += f" - {largest_num[0]} milyon kullanıcı etkisi!"
+        # Başlığı kelime kelime ekle (maksimum 15 kelime)
+        title_words = clean_title.split()[:15]
+        tweet_words.extend(title_words)
         
         # Şirket bilgisi ekle
-        if companies:
+        if companies and len(tweet_words) < 25:
             main_company = companies[0]
-            if len(main_text) < 180:
-                main_text += f" {main_company}'dan önemli adım!"
+            if "acquisition" in combined_text or "acqui-hire" in combined_text:
+                tweet_words.extend(["makes", "strategic", "acquisition", "move"])
+            elif "funding" in combined_text:
+                tweet_words.extend(["secures", "major", "funding", "round"])
+            elif "launch" in combined_text:
+                tweet_words.extend(["launches", "innovative", "technology", "platform"])
+            else:
+                tweet_words.extend(["announces", "significant", "breakthrough", "development"])
         
-        # İçerikten önemli cümle çıkar
-        if content and len(content) > 50:
-            sentences = content.split('.')
-            for sentence in sentences[:3]:  # İlk 3 cümleyi kontrol et
-                sentence = sentence.strip()
-                if len(sentence) > 30 and len(sentence) < 100:
-                    # Önemli kelimeler içeriyorsa ekle
-                    important_words = ["announced", "launched", "released", "unveiled", "raised", "acquired", "developed"]
-                    if any(word in sentence.lower() for word in important_words):
-                        if len(main_text) + len(sentence) < 200:
-                            main_text += f" {sentence}."
-                        break
+        # Sayısal bilgi ekle
+        if numbers and len(tweet_words) < 30:
+            largest_num = max(numbers, key=lambda x: float(x[0]))
+            if largest_num[1].lower() in ['billion']:
+                tweet_words.extend([f"${largest_num[0]}B", "market", "impact"])
+            elif largest_num[1].lower() in ['million']:
+                tweet_words.extend([f"{largest_num[0]}M", "users", "affected"])
         
-        # Hashtag'ler oluştur
+        # Konuya özel kelimeler ekle
+        if len(tweet_words) < 32:
+            if "AI" in combined_text or "artificial intelligence" in combined_text:
+                tweet_words.extend(["advancing", "AI", "capabilities"])
+            elif "security" in combined_text:
+                tweet_words.extend(["enhancing", "digital", "security"])
+            elif "browser" in combined_text:
+                tweet_words.extend(["revolutionizing", "web", "experience"])
+            elif "search" in combined_text:
+                tweet_words.extend(["transforming", "search", "technology"])
+            else:
+                tweet_words.extend(["driving", "tech", "innovation"])
+        
+        # 35 kelimeye tamamla
+        filler_words = ["This", "represents", "significant", "technological", "advancement", "in", "the", "industry", "with", "major", "implications", "for", "future", "development", "and", "growth", "marking", "important", "milestone", "bringing", "new", "opportunities", "creating", "value", "through", "cutting-edge", "solutions"]
+        
+        # Tekrarları önlemek için kullanılan kelimeleri takip et
+        used_words = set(word.lower() for word in tweet_words)
+        
+        while len(tweet_words) < 35:
+            needed = 35 - len(tweet_words)
+            available_fillers = [word for word in filler_words if word.lower() not in used_words]
+            
+            if not available_fillers:
+                # Eğer tüm filler kelimeler kullanıldıysa, yeni kelimeler ekle
+                additional_words = ["breakthrough", "innovation", "progress", "evolution", "transformation", "revolution", "enhancement", "improvement", "modernization", "optimization"]
+                available_fillers = [word for word in additional_words if word.lower() not in used_words]
+            
+            if available_fillers:
+                to_add = min(needed, len(available_fillers))
+                selected_words = available_fillers[:to_add]
+                tweet_words.extend(selected_words)
+                used_words.update(word.lower() for word in selected_words)
+            else:
+                # Son çare: sayılar ekle
+                remaining = 35 - len(tweet_words)
+                for i in range(remaining):
+                    tweet_words.append(f"step{i+1}")
+                break
+        
+        # Tam 35 kelime al
+        tweet_words = tweet_words[:35]
+        
+        # Hashtag'ler oluştur (kelime sayısına dahil değil)
         hashtags = []
-        if keywords:
-            hashtags.extend([f"#{k}" for k in keywords])
-        
-        # Konuya özel hashtag'ler ekle
+        if "AI" in combined_text:
+            hashtags.append("#AI")
+        if "tech" in combined_text or "technology" in combined_text:
+            hashtags.append("#Tech")
         if "funding" in combined_text or "investment" in combined_text:
-            hashtags.append("#Yatırım")
-        if "model" in combined_text:
-            hashtags.append("#YapayZeka")
+            hashtags.append("#Investment")
         if "security" in combined_text:
-            hashtags.append("#Güvenlik")
-        if "browser" in combined_text:
-            hashtags.append("#Tarayıcı")
+            hashtags.append("#Security")
         
         # Varsayılan hashtag'ler
         if not hashtags:
-            hashtags = ["#AI", "#Teknoloji", "#YapayZeka"]
-        else:
-            hashtags.append("#YapayZeka")
+            hashtags = ["#AI", "#Tech"]
         
-        # Hashtag'leri sınırla (maksimum 4)
-        hashtags = hashtags[:4]
-        hashtag_text = " ".join(hashtags)
+        # Innovation her zaman ekle
+        if "#Innovation" not in hashtags:
+            hashtags.append("#Innovation")
+        
+        # Maksimum 3 hashtag
+        hashtags = hashtags[:3]
         
         # Final tweet oluştur
-        fallback_tweet = f"{main_text} {hashtag_text}"
+        tweet_text = " ".join(tweet_words)
+        hashtag_text = " ".join(hashtags)
+        tweet_without_url = f"{tweet_text} {hashtag_text}"
         
-        # Uzunluk kontrolü ve optimizasyon
-        if len(fallback_tweet) > 250:
-            # Hashtag'leri azalt
-            hashtags = hashtags[:2]
-            hashtag_text = " ".join(hashtags)
-            fallback_tweet = f"{main_text} {hashtag_text}"
-            
-            if len(fallback_tweet) > 250:
-                # Ana metni kısalt
-                available_length = 250 - len(hashtag_text) - 5
-                main_text = main_text[:available_length] + "..."
-                fallback_tweet = f"{main_text} {hashtag_text}"
+        # URL ekle
+        if url:
+            fallback_tweet = f"{tweet_without_url}\n\n🔗 {url}"
+        else:
+            fallback_tweet = tweet_without_url
         
-        # Minimum uzunluk kontrolü
-        if len(fallback_tweet) < 50:
-            # Çok kısa ise ek bilgi ekle
-            extra_info = " Bu gelişme teknoloji dünyasında önemli bir adım!"
-            if len(fallback_tweet) + len(extra_info) <= 250:
-                fallback_tweet += extra_info
+        # Final kelime sayısını kontrol et (hashtag'ler hariç)
+        final_word_count = len(tweet_text.split())
+        print(f"[FALLBACK] Tweet oluşturuldu: {final_word_count} kelime (hedef: 35)")
         
         return fallback_tweet
         
     except Exception as e:
         print(f"Fallback tweet oluşturma hatası: {e}")
-        # En basit fallback
-        return f"🤖 {title[:180]}... #AI #Teknoloji #YapayZeka"
+        # En basit fallback (İngilizce, 35 kelime)
+        simple_words = title.split()[:20]  # İlk 20 kelime
+        filler = ["represents", "major", "breakthrough", "in", "artificial", "intelligence", "and", "technology", "sector", "with", "significant", "implications", "for", "future", "innovation"]
+        simple_words.extend(filler)
+        simple_words = simple_words[:35]  # Tam 35 kelime
+        simple_tweet = " ".join(simple_words)
+        return f"🤖 {simple_tweet} #AI #Tech #Innovation\n\n🔗 {url}" if url else f"🤖 {simple_tweet} #AI #Tech #Innovation"
 
 def setup_twitter_api():
     """X (Twitter) API kurulumu"""

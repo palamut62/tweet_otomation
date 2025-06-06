@@ -212,14 +212,46 @@ with st.sidebar:
     
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("▶️ Başlat", help="Otomatik scheduler'ı başlat"):
-            st.info("🚀 Terminal'de şu komutu çalıştırın:")
-            st.code("python scheduler.py --auto")
+        if st.button("▶️ Otomatik Başlat", help="Otomatik haber kontrolü ve tweet oluşturma"):
+            with st.spinner("Otomatik işlem başlatılıyor..."):
+                try:
+                    # Scheduler fonksiyonunu doğrudan çağır
+                    from scheduler import run_automation_once
+                    result = run_automation_once()
+                    
+                    if result.get("success", False):
+                        st.success(f"✅ {result.get('message', 'İşlem tamamlandı')}")
+                        if result.get("new_articles", 0) > 0:
+                            st.info(f"📰 {result['new_articles']} yeni makale işlendi")
+                        if result.get("pending_tweets", 0) > 0:
+                            st.info(f"📝 {result['pending_tweets']} tweet manuel onay için bekliyor")
+                    else:
+                        st.warning(f"⚠️ {result.get('message', 'İşlem tamamlandı ama yeni içerik bulunamadı')}")
+                    
+                    # Sayfayı yenile
+                    st.rerun()
+                    
+                except Exception as e:
+                    st.error(f"❌ Hata: {str(e)}")
     
     with col2:
-        if st.button("⏯️ Tek Çalıştır", help="Bir kez kontrol et"):
-            st.info("🔄 Terminal'de şu komutu çalıştırın:")
-            st.code("python scheduler.py --once")
+        if st.button("⏯️ Tek Kontrol", help="Bir kez haber kontrolü yap"):
+            with st.spinner("Haberler kontrol ediliyor..."):
+                try:
+                    # Sadece haber çekme işlemi
+                    articles = fetch_latest_ai_articles()
+                    
+                    if articles:
+                        new_articles = [a for a in articles if not a.get('already_posted', False)]
+                        st.success(f"✅ {len(new_articles)} yeni makale bulundu!")
+                        st.session_state.articles = articles
+                    else:
+                        st.warning("⚠️ Yeni makale bulunamadı")
+                    
+                    st.rerun()
+                    
+                except Exception as e:
+                    st.error(f"❌ Hata: {str(e)}")
     
     # Otomatik/Manuel mod (eski - geriye uyumluluk için)
     auto_mode_legacy = st.checkbox("🔄 Otomatik Tweet Paylaşımı (Eski)", value=False)
