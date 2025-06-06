@@ -1,0 +1,9 @@
+{
+  "auto_mode": false,
+  "min_score": 6,
+  "check_interval_hours": 2,
+  "max_articles_per_run": 5,
+  "auto_post_enabled": false,
+  "rate_limit_delay": 3.0,
+  "last_updated": "2025-06-06T18:51:10.839091"
+}
