@@ -7,3 +7,4 @@ python-dotenv
 tweepy
 schedule
 apscheduler
+python-telegram-bot

@@ -431,8 +431,8 @@ def setup_twitter_api():
         print(f"Twitter API kurulum hatası: {e}")
         return None
 
-def post_tweet(tweet_text):
-    """X platformunda tweet paylaşma"""
+def post_tweet(tweet_text, article_title=""):
+    """X platformunda tweet paylaşma ve Telegram bildirimi"""
     try:
         client = setup_twitter_api()
         if not client:
@@ -465,10 +465,29 @@ def post_tweet(tweet_text):
         
         if response.data:
             tweet_id = response.data['id']
+            tweet_url = f"https://twitter.com/user/status/{tweet_id}"
+            
+            # Telegram bildirimi gönder
+            try:
+                telegram_result = send_telegram_notification(
+                    message=tweet_text,
+                    tweet_url=tweet_url,
+                    article_title=article_title
+                )
+                
+                if telegram_result.get("success"):
+                    print(f"[SUCCESS] Telegram bildirimi gönderildi")
+                else:
+                    print(f"[WARNING] Telegram bildirimi gönderilemedi: {telegram_result.get('reason', 'unknown')}")
+                    
+            except Exception as telegram_error:
+                print(f"[ERROR] Telegram bildirim hatası: {telegram_error}")
+            
             return {
                 "success": True, 
                 "tweet_id": tweet_id,
-                "url": f"https://twitter.com/user/status/{tweet_id}"
+                "url": tweet_url,
+                "telegram_sent": telegram_result.get("success", False) if 'telegram_result' in locals() else False
             }
         else:
             return {"success": False, "error": "Tweet oluşturulamadı"}
@@ -843,3 +862,130 @@ def validate_automation_settings(settings):
         errors.append("Rate limit gecikmesi 0-60 saniye arasında olmalı")
     
     return errors
+
+def send_telegram_notification(message, tweet_url="", article_title=""):
+    """Telegram bot'a bildirim gönder"""
+    try:
+        settings = load_automation_settings()
+        
+        if not settings.get("telegram_notifications", False):
+            print("[DEBUG] Telegram bildirimleri kapalı")
+            return {"success": False, "reason": "disabled"}
+        
+        bot_token = settings.get("telegram_bot_token", "").strip()
+        chat_id = settings.get("telegram_chat_id", "").strip()
+        
+        if not bot_token or not chat_id:
+            print("[WARNING] Telegram bot token veya chat ID eksik")
+            return {"success": False, "reason": "missing_credentials"}
+        
+        # Telegram mesajını hazırla
+        telegram_message = f"🤖 **Yeni Tweet Paylaşıldı!**\n\n"
+        
+        if article_title:
+            telegram_message += f"📰 **Makale:** {article_title}\n\n"
+        
+        telegram_message += f"💬 **Tweet:** {message}\n\n"
+        
+        if tweet_url:
+            telegram_message += f"🔗 **Link:** {tweet_url}\n\n"
+        
+        telegram_message += f"⏰ **Zaman:** {datetime.now().strftime('%d.%m.%Y %H:%M')}"
+        
+        # Telegram API'ye gönder
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        
+        payload = {
+            "chat_id": str(chat_id),
+            "text": telegram_message,
+            "parse_mode": "Markdown",
+            "disable_web_page_preview": False
+        }
+        
+        response = requests.post(url, json=payload, timeout=10)
+        
+        if response.status_code == 200:
+            print(f"[SUCCESS] Telegram bildirimi gönderildi: {chat_id}")
+            return {"success": True, "message_id": response.json().get("result", {}).get("message_id")}
+        else:
+            print(f"[ERROR] Telegram API hatası: {response.status_code} - {response.text}")
+            return {"success": False, "error": f"API Error: {response.status_code}"}
+            
+    except Exception as e:
+        print(f"[ERROR] Telegram bildirim hatası: {e}")
+        return {"success": False, "error": str(e)}
+
+def test_telegram_connection():
+    """Telegram bot bağlantısını test et"""
+    try:
+        settings = load_automation_settings()
+        
+        bot_token = settings.get("telegram_bot_token", "").strip()
+        chat_id = settings.get("telegram_chat_id", "").strip()
+        
+        if not bot_token or not chat_id:
+            return {"success": False, "error": "Bot token veya chat ID eksik"}
+        
+        # Bot bilgilerini al
+        url = f"https://api.telegram.org/bot{bot_token}/getMe"
+        response = requests.get(url, timeout=10)
+        
+        if response.status_code != 200:
+            return {"success": False, "error": f"Bot token geçersiz: {response.status_code}"}
+        
+        bot_info = response.json().get("result", {})
+        
+        # Test mesajı gönder
+        test_message = f"🧪 **Test Mesajı**\n\nBot başarıyla bağlandı!\n\n⏰ {datetime.now().strftime('%d.%m.%Y %H:%M')}"
+        
+        send_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        payload = {
+            "chat_id": str(chat_id),
+            "text": test_message,
+            "parse_mode": "Markdown"
+        }
+        
+        send_response = requests.post(send_url, json=payload, timeout=10)
+        
+        if send_response.status_code == 200:
+            return {
+                "success": True, 
+                "bot_name": bot_info.get("first_name", "Unknown"),
+                "bot_username": bot_info.get("username", "Unknown")
+            }
+        else:
+            error_detail = send_response.text
+            return {"success": False, "error": f"Mesaj gönderilemedi: {send_response.status_code} - {error_detail}"}
+            
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+def get_telegram_chat_id(bot_token):
+    """Bot'a mesaj gönderen kullanıcıların chat ID'lerini al"""
+    try:
+        url = f"https://api.telegram.org/bot{bot_token}/getUpdates"
+        response = requests.get(url, timeout=10)
+        
+        if response.status_code != 200:
+            return {"success": False, "error": "Bot token geçersiz"}
+        
+        data = response.json()
+        updates = data.get("result", [])
+        
+        chat_ids = []
+        for update in updates[-10:]:  # Son 10 mesaj
+            message = update.get("message", {})
+            chat = message.get("chat", {})
+            if chat.get("id"):
+                chat_info = {
+                    "chat_id": chat.get("id"),
+                    "type": chat.get("type"),
+                    "title": chat.get("title") or f"{chat.get('first_name', '')} {chat.get('last_name', '')}".strip()
+                }
+                if chat_info not in chat_ids:
+                    chat_ids.append(chat_info)
+        
+        return {"success": True, "chat_ids": chat_ids}
+        
+    except Exception as e:
+        return {"success": False, "error": str(e)}

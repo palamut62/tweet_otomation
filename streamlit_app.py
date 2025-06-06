@@ -10,7 +10,8 @@ from utils import (
     check_duplicate_articles, setup_twitter_api, get_posted_articles_summary,
     reset_all_data, clear_pending_tweets, get_data_statistics,
     load_automation_settings, save_automation_settings, get_automation_status,
-    update_scheduler_settings, validate_automation_settings
+    update_scheduler_settings, validate_automation_settings,
+    send_telegram_notification, test_telegram_connection, get_telegram_chat_id
 )
 
 load_dotenv()
@@ -206,6 +207,90 @@ with st.sidebar:
                 st.rerun()
             else:
                 st.error(save_result["message"])
+    
+    # Telegram Ayarları
+    st.header("📱 Telegram Bildirimleri")
+    
+    with st.expander("🔧 Telegram Bot Ayarları", expanded=False):
+        current_settings = load_automation_settings()
+        
+        telegram_enabled = st.checkbox(
+            "📱 Telegram Bildirimleri Aktif",
+            value=current_settings.get("telegram_notifications", False),
+            help="Her tweet paylaşıldığında Telegram'a bildirim gönder"
+        )
+        
+        bot_token = st.text_input(
+            "🤖 Bot Token",
+            value=current_settings.get("telegram_bot_token", ""),
+            type="password",
+            help="@BotFather'dan aldığınız bot token'ı"
+        )
+        
+        chat_id = st.text_input(
+            "💬 Chat ID",
+            value=current_settings.get("telegram_chat_id", ""),
+            help="Bildirimlerin gönderileceği chat ID"
+        )
+        
+        # Chat ID bulma yardımcısı
+        if bot_token and st.button("🔍 Chat ID'leri Bul"):
+            with st.spinner("Chat ID'ler aranıyor..."):
+                result = get_telegram_chat_id(bot_token)
+                if result["success"]:
+                    if result["chat_ids"]:
+                        st.success("✅ Chat ID'ler bulundu:")
+                        for chat in result["chat_ids"]:
+                            st.code(f"ID: {chat['chat_id']} | Tip: {chat['type']} | İsim: {chat['title']}")
+                    else:
+                        st.warning("⚠️ Chat ID bulunamadı. Bot'a önce bir mesaj gönderin.")
+                else:
+                    st.error(f"❌ Hata: {result['error']}")
+        
+        # Test butonu
+        if bot_token and chat_id and st.button("🧪 Bağlantıyı Test Et"):
+            with st.spinner("Test mesajı gönderiliyor..."):
+                result = test_telegram_connection()
+                if result["success"]:
+                    st.success(f"✅ Test başarılı! Bot: {result['bot_name']} (@{result['bot_username']})")
+                else:
+                    st.error(f"❌ Test başarısız: {result['error']}")
+        
+        # Telegram ayarlarını kaydet
+        if st.button("💾 Telegram Ayarlarını Kaydet"):
+            telegram_settings = current_settings.copy()
+            telegram_settings.update({
+                "telegram_notifications": telegram_enabled,
+                "telegram_bot_token": bot_token.strip(),
+                "telegram_chat_id": chat_id.strip()
+            })
+            
+            save_result = save_automation_settings(telegram_settings)
+            if save_result["success"]:
+                st.success("✅ Telegram ayarları kaydedildi!")
+                st.rerun()
+            else:
+                st.error(f"❌ Kaydetme hatası: {save_result['message']}")
+        
+        # Telegram kurulum rehberi
+        if st.button("📖 Kurulum Rehberini Göster"):
+            st.info("""
+            **1. Bot Oluşturma:**
+            - Telegram'da @BotFather'a mesaj gönderin
+            - `/newbot` komutunu kullanın
+            - Bot adını ve kullanıcı adını belirleyin
+            - Bot token'ınızı kopyalayın
+            
+            **2. Chat ID Bulma:**
+            - Bot'unuza bir mesaj gönderin
+            - Yukarıdaki "Chat ID'leri Bul" butonuna tıklayın
+            - Çıkan ID'yi kopyalayın
+            
+            **3. Test:**
+            - Token ve Chat ID'yi girin
+            - "Bağlantıyı Test Et" butonuna tıklayın
+            - Test mesajını Telegram'da kontrol edin
+            """)
     
     # Scheduler kontrol butonları
     st.header("🎮 Scheduler Kontrolü")
@@ -408,11 +493,14 @@ with col1:
                         if st.button(f"📤 Tweet Paylaş", key=f"tweet_share_{idx}", disabled=not twitter_client):
                             if twitter_client:
                                 with st.spinner("Tweet paylaşılıyor..."):
-                                    result = post_tweet(tweet_text)
+                                    result = post_tweet(tweet_text, article.get('title', ''))
                                     
                                     if result["success"]:
                                         mark_article_as_posted(article, result)
-                                        st.success(f"✅ Tweet paylaşıldı! [Link]({result['url']})")
+                                        success_msg = f"✅ Tweet paylaşıldı! [Link]({result['url']})"
+                                        if result.get('telegram_sent'):
+                                            success_msg += "\n📱 Telegram bildirimi gönderildi!"
+                                        st.success(success_msg)
                                         
                                         # Session state'den kaldır
                                         if f'generated_tweet_{idx}' in st.session_state:
@@ -483,13 +571,16 @@ with col2:
                 
                 if st.button(f"✅ Onayla", key=f"pending_approve_{idx}"):
                     if twitter_client:
-                        result = post_tweet(pending['tweet_text'])
+                        result = post_tweet(pending['tweet_text'], pending['article'].get('title', ''))
                         if result["success"]:
                             mark_article_as_posted(pending['article'], result)
                             # Pending'den kaldır
                             pending['status'] = 'posted'
                             save_json("pending_tweets.json", pending_tweets)
-                            st.success("✅ Tweet paylaşıldı!")
+                            success_msg = "✅ Tweet paylaşıldı!"
+                            if result.get('telegram_sent'):
+                                success_msg += "\n📱 Telegram bildirimi gönderildi!"
+                            st.success(success_msg)
                             st.rerun()
                         else:
                             st.error(f"❌ Hata: {result['error']}")

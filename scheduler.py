@@ -148,11 +148,13 @@ class AutoTweetScheduler:
                     # Paylaşım stratejisi
                     if self.auto_post_enabled and not self.require_manual_approval:
                         # Direkt otomatik paylaş
-                        result = post_tweet(tweet_text)
+                        result = post_tweet(tweet_text, article.get('title', ''))
                         
                         if result["success"]:
                             mark_article_as_posted(article, result)
                             print(f"[SUCCESS] Tweet otomatik paylaşıldı: {result['url']}")
+                            if result.get('telegram_sent'):
+                                print(f"[SUCCESS] Telegram bildirimi gönderildi")
                             processed_count += 1
                         else:
                             print(f"[ERROR] Tweet paylaşım hatası: {result['error']}")
@@ -323,7 +325,7 @@ def run_automation_once():
                 # Paylaşım stratejisi
                 if scheduler.auto_post_enabled and not scheduler.require_manual_approval:
                     # Direkt otomatik paylaş
-                    result = post_tweet(tweet_text)
+                    result = post_tweet(tweet_text, article.get('title', ''))
                     
                     if result["success"]:
                         mark_article_as_posted(article, result)
