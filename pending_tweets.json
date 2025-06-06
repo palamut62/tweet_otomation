@@ -115,5 +115,44 @@
     "score": 8,
     "created_date": "2025-06-06T18:18:47.172653",
     "status": "pending"
+  },
+  {
+    "article": {
+      "title": "X changes its terms to bar training of AI models using its content",
+      "url": "https://techcrunch.com/2025/06/05/x-changes-its-terms-to-bar-training-of-ai-models-using-its-content/",
+      "content": "Social network X has changed its developer agreement to prevent third parties from using the platform’s content to train large language models.\nIn an update on Wednesday, the company added a line under “Reverse Engineering and other Restrictions,” a subsection of restrictions on use: “You shall not and you shall not attempt to (or allow others to) […] use the X API or X Content to fine-tune or train a foundation or frontier model,” it reads.\nThis change comes after Elon Musk’s AI company xAI acquired X in March — understandably, xAI wouldn’t want to give its competitors free access to the social platform’s data without a sale agreement.\nIn 2023, X changed its privacy policy to use public data on its site to train AI models. Last October, it made further changes to allow third parties to train their models.\nReddit has also put in place safeguards against AI crawlers, and last month, The Browser Company added a similar clause to its AI-focused browser Dia’s terms of use.",
+      "hash": "3f2e4ba710856c746773618bc546be4a",
+      "fetch_date": "2025-06-06T18:18:14.247125"
+    },
+    "tweet_text": "\"X, büyük dil modellerini entrenlemek için platformunun contenidoını kullanmaya izin vermeyecek! 🤖🚫 Elon Musk'ın yapay zeka şirketi xAI tarafından acquired being after March'te, platformun verilerine free access vermemeye karar verdi! #AI #Teknolo...\n\n🔗 https://techcrunch.com/2025/06/05/x-changes-its-terms-to-bar-training-of-ai-models-using-its-content/",
+    "score": 8,
+    "created_date": "2025-06-06T18:18:53.047104",
+    "status": "pending"
+  },
+  {
+    "article": {
+      "title": "Toma’s AI voice agents have taken off at car dealerships — and attracted funding from a16z",
+      "url": "https://techcrunch.com/2025/06/05/tomas-ai-voice-agents-have-taken-off-at-car-dealerships-and-attracted-funding-from-a16z/",
+      "content": "When Monik Pamecha co-founded AI voice startup Toma in early 2024, he hadn’t anticipated spending the summer months sweating in Bible Belt car dealerships. He and co-founder Anthony Krivonos were still focused on banking and healthcare customers when the dealers came knocking.\n“They just called us up and said ‘we are drowning in phone calls,’” Pamecha described that initial contact in an interview with TechCrunch.\nSeeing an opportunity to pivot into a far less-regulated space than banking or healthcare, Pamecha and Krivonos set up a test: They decided to have their voice agent call essentially every car dealership in the country multiple times. Over the span of a few weeks they found those calls were only picked up 45% of the time.\nThe co-founders packed their bags. And like some sort of modern reinterpretation of the movie “Tommy Boy,” they set out to tour a dozen car dealerships in Oklahoma and Mississippi to get a better understanding of how these businesses work. They got their hands dirty both figuratively and literally; Pamecha said his wife was surprised by the grease stains on his clothes when he returned home.\nThat commitment paid off. Not only did they win customers, they got the dealers’ full charm offensive. The founders shared home-cooked meals — a sometimes awkward-but-funny affair given Pamecha’s vegetarianism, he said — and were invited to tour the Corvette Museum. At least one dealer even asked the Toma founders to tag along to a shooting range.\nSeema Amble, a partner at a16z who led the $17 million that Toma has raised to date, said the pair were “effectively living at these dealerships, going to these dealers’ family barbecues, really understanding how they operate.”\n“We invest in a lot of the next-generation of vertical AI companies, a lot of the best founders have just lived and breathed with these customers to understand what’s going on under the hood,” she told TechCrunch. “No pun intended.”\nThe insights from that trip helped Pamecha and Krivo",
+      "hash": "867533907039f3f6ce03e9b6a55d37e3",
+      "fetch_date": "2025-06-06T18:18:14.656109"
+    },
+    "tweet_text": "Ayrıntısız bir şekilde car dealerships'da working... 🚗💻 Toma'nın AI ses agentleri, car dealerships'de büyük bir success ile tanıştı! 🤖 #AI #Teknoloji #YapayZeka\n\n🔗 https://techcrunch.com/2025/06/05/tomas-ai-voice-agents-have-taken-off-at-car-dealerships-and-attracted-funding-from-a16z/",
+    "score": 8,
+    "created_date": "2025-06-06T18:18:58.554633",
+    "status": "pending"
+  },
+  {
+    "article": {
+      "title": "Collibra acquires data access startup Raito",
+      "url": "https://techcrunch.com/2025/06/05/collibra-acquires-data-access-startup-raito/",
+      "content": "Collibra, a data governance platform based in Brussels, is the latest enterprise to acquire a data company in order to expand its offerings in the age of AI.\nOn Thursday, Collibra announced its acquisition of Raito, a data access startup founded in 2021. Raito, also located in Brussels, helps companies manage which employees and customers have access to internal data.\nCollibra declined to comment on the terms of the deal. Raito previously raised $4 million in venture funding from investors, including Dawn Capital, Crane Venture Partners, and Collibra itself.\nCollibra founder and CEO Felix Van de Maele told TechCrunch that while managing data access is not a new problem for enterprises, it is becoming a bigger headache for data teams as more departments seek access for AI agents and workflow automation.\n“We heard from our customers and large organizations that managing data access at scale has become a really big problem,” Van de Maele said. “That’s why the traditional approaches just don’t scale anymore. They’re too brittle. They’re manual workflows, [based on] static policies.”\nVan de Maele added that Collibra already has a similar product, Collibra Protect, that touches on these access controls but is primarily focused on keeping data private. Raito’s tech will help Collibra bolster and automate that offering.\nRaito isn’t the only company focused on data access. Legacy enterprises like SailPoint and SecureAuth are just a few of the companies also offering data access tools. Van de Maele said buying Raito was the right choice for the company, as opposed to partnering with a legacy player, because Raito is cloud-native and built for the current AI moment.\nThat Raito was founded by former Collibra employees didn’t hurt either.\n“We also [were] looking for teams that want to continue to build, right? It’s not the end for this,” Van de Maele said. “It is just really the beginning of this journey.”\nThis is just the latest acquisition of a data company aimed at addressing",
+      "hash": "e5ea3d7740ebce831db0793dd57c02fd",
+      "fetch_date": "2025-06-06T18:18:15.056950"
+    },
+    "tweet_text": "\"AI ageinde verilerin kontrolü, büyük bir problem haline geldi! Collibra, data access startup Raito'u acquisition yaparak AI agentleri ve iş akış otomasyonuna yönelik verilerin kontrolü için daha büyük firmalara çözüm sunmaya başladı! 🤖 #AI #Tekno...\n\n🔗 https://techcrunch.com/2025/06/05/collibra-acquires-data-access-startup-raito/",
+    "score": 8,
+    "created_date": "2025-06-06T18:19:05.017596",
+    "status": "pending"
   }
 ]
