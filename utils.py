@@ -194,8 +194,112 @@ def openrouter_call(prompt, api_key, max_tokens=100):
         print(f"OpenRouter API çağrı hatası: {e}")
         return "Bağlantı hatası"
 
+def generate_smart_hashtags(title, content):
+    """Makale içeriğine göre akıllı hashtag oluşturma - 5 popüler hashtag"""
+    combined_text = f"{title.lower()} {content.lower()}"
+    hashtags = []
+    
+    # AI ve Machine Learning hashtag'leri
+    if any(keyword in combined_text for keyword in ["artificial intelligence", "ai", "machine learning", "ml", "neural", "deep learning"]):
+        hashtags.extend(["#ArtificialIntelligence", "#MachineLearning", "#DeepLearning", "#NeuralNetworks"])
+    
+    # Teknoloji ve yazılım hashtag'leri
+    if any(keyword in combined_text for keyword in ["software", "programming", "code", "developer", "api"]):
+        hashtags.extend(["#SoftwareDevelopment", "#Programming", "#Developer", "#API"])
+    
+    # Startup ve yatırım hashtag'leri
+    if any(keyword in combined_text for keyword in ["startup", "funding", "investment", "venture", "billion", "million"]):
+        hashtags.extend(["#Startup", "#Investment", "#VentureCapital", "#Funding", "#Business"])
+    
+    # Şirket özel hashtag'leri
+    if "openai" in combined_text:
+        hashtags.extend(["#OpenAI", "#ChatGPT", "#GPT"])
+    if "google" in combined_text:
+        hashtags.extend(["#Google", "#Alphabet", "#GoogleAI"])
+    if "microsoft" in combined_text:
+        hashtags.extend(["#Microsoft", "#Azure", "#Copilot"])
+    if "meta" in combined_text:
+        hashtags.extend(["#Meta", "#Facebook", "#MetaAI"])
+    if "apple" in combined_text:
+        hashtags.extend(["#Apple", "#iOS", "#AppleAI"])
+    if "tesla" in combined_text:
+        hashtags.extend(["#Tesla", "#ElonMusk", "#Autopilot"])
+    if "nvidia" in combined_text:
+        hashtags.extend(["#NVIDIA", "#GPU", "#CUDA"])
+    if "anthropic" in combined_text:
+        hashtags.extend(["#Anthropic", "#Claude"])
+    
+    # Teknoloji alanları
+    if any(keyword in combined_text for keyword in ["blockchain", "crypto", "bitcoin", "ethereum"]):
+        hashtags.extend(["#Blockchain", "#Cryptocurrency", "#Web3", "#DeFi"])
+    if any(keyword in combined_text for keyword in ["cloud", "aws", "azure", "gcp"]):
+        hashtags.extend(["#CloudComputing", "#AWS", "#Azure", "#CloudNative"])
+    if any(keyword in combined_text for keyword in ["cybersecurity", "security", "privacy", "encryption"]):
+        hashtags.extend(["#Cybersecurity", "#DataPrivacy", "#InfoSec"])
+    if any(keyword in combined_text for keyword in ["quantum", "quantum computing"]):
+        hashtags.extend(["#QuantumComputing", "#Quantum", "#QuantumTech"])
+    if any(keyword in combined_text for keyword in ["robotics", "robot", "automation"]):
+        hashtags.extend(["#Robotics", "#Automation", "#RoboticProcess"])
+    if any(keyword in combined_text for keyword in ["iot", "internet of things", "smart home"]):
+        hashtags.extend(["#IoT", "#SmartHome", "#ConnectedDevices"])
+    if any(keyword in combined_text for keyword in ["5g", "6g", "network", "connectivity"]):
+        hashtags.extend(["#5G", "#Connectivity", "#Telecommunications"])
+    if any(keyword in combined_text for keyword in ["ar", "vr", "augmented reality", "virtual reality", "metaverse"]):
+        hashtags.extend(["#AR", "#VR", "#Metaverse", "#XR"])
+    
+    # Genel teknoloji hashtag'leri
+    general_hashtags = ["#Innovation", "#Technology", "#DigitalTransformation", "#FutureTech", "#TechNews"]
+    hashtags.extend(general_hashtags)
+    
+    # Tekrarları kaldır ve 5 tane seç
+    unique_hashtags = list(dict.fromkeys(hashtags))  # Sırayı koruyarak tekrarları kaldır
+    
+    # En alakalı 5 hashtag seç
+    selected_hashtags = unique_hashtags[:5]
+    
+    # Eğer 5'ten az varsa, genel hashtag'lerle tamamla
+    if len(selected_hashtags) < 5:
+        remaining_general = [h for h in general_hashtags if h not in selected_hashtags]
+        selected_hashtags.extend(remaining_general[:5-len(selected_hashtags)])
+    
+    return selected_hashtags[:5]
+
+def generate_smart_emojis(title, content):
+    """Makale içeriğine göre akıllı emoji seçimi"""
+    combined_text = f"{title.lower()} {content.lower()}"
+    emojis = []
+    
+    # Konu bazlı emojiler
+    if any(keyword in combined_text for keyword in ["ai", "artificial intelligence", "robot", "machine learning"]):
+        emojis.extend(["🤖", "🧠", "⚡"])
+    if any(keyword in combined_text for keyword in ["funding", "investment", "billion", "million", "money"]):
+        emojis.extend(["💰", "💸", "📈"])
+    if any(keyword in combined_text for keyword in ["launch", "release", "unveil", "announce"]):
+        emojis.extend(["🚀", "🎉", "✨"])
+    if any(keyword in combined_text for keyword in ["research", "development", "breakthrough", "discovery"]):
+        emojis.extend(["🔬", "💡", "🧪"])
+    if any(keyword in combined_text for keyword in ["security", "privacy", "protection", "safe"]):
+        emojis.extend(["🔒", "🛡️", "🔐"])
+    if any(keyword in combined_text for keyword in ["acquisition", "merger", "partnership"]):
+        emojis.extend(["🤝", "🔗", "💼"])
+    if any(keyword in combined_text for keyword in ["search", "query", "find", "discover"]):
+        emojis.extend(["🔍", "🔎", "📊"])
+    if any(keyword in combined_text for keyword in ["mobile", "phone", "app", "smartphone"]):
+        emojis.extend(["📱", "📲", "💻"])
+    if any(keyword in combined_text for keyword in ["cloud", "server", "data", "storage"]):
+        emojis.extend(["☁️", "💾", "🗄️"])
+    if any(keyword in combined_text for keyword in ["game", "gaming", "entertainment"]):
+        emojis.extend(["🎮", "🕹️", "🎯"])
+    
+    # Eğer emoji bulunamadıysa varsayılan emojiler
+    if not emojis:
+        emojis = ["🚀", "💻", "🌟", "⚡", "🔥"]
+    
+    # En fazla 3 emoji seç
+    return emojis[:3]
+
 def generate_ai_tweet_with_content(article_data, api_key):
-    """Makale içeriğini okuyarak gelişmiş tweet oluşturma - Karakter limiti kontrolü ile"""
+    """Makale içeriğini okuyarak gelişmiş tweet oluşturma - Akıllı hashtag ve emoji ile"""
     title = article_data.get("title", "")
     content = article_data.get("content", "")
     url = article_data.get("url", "")
@@ -203,9 +307,19 @@ def generate_ai_tweet_with_content(article_data, api_key):
     # Twitter karakter limiti (URL için 23 karakter ayrılır)
     TWITTER_LIMIT = 280
     URL_LENGTH = 25  # "\n\n🔗 " + URL kısaltması için
-    MAX_CONTENT_LENGTH = TWITTER_LIMIT - URL_LENGTH
     
-    # İngilizce tweet için prompt
+    # Akıllı hashtag ve emoji oluştur
+    smart_hashtags = generate_smart_hashtags(title, content)
+    smart_emojis = generate_smart_emojis(title, content)
+    
+    hashtag_text = " ".join(smart_hashtags)
+    emoji_text = "".join(smart_emojis)
+    
+    # Hashtag ve emoji için yer ayır
+    hashtag_emoji_length = len(hashtag_text) + len(emoji_text) + 2  # 2 boşluk için
+    MAX_CONTENT_LENGTH = TWITTER_LIMIT - URL_LENGTH - hashtag_emoji_length
+    
+    # İngilizce tweet için prompt (hashtag'siz)
     prompt = f"""Create an engaging English tweet about this AI/tech news article. 
 
 Article Title: {title}
@@ -213,14 +327,13 @@ Article Content: {content[:1000]}
 
 Requirements:
 - Write in English only
-- Maximum {MAX_CONTENT_LENGTH} characters (excluding URL)
-- Include relevant emojis
+- Maximum {MAX_CONTENT_LENGTH} characters
 - Make it engaging and informative
 - Focus on the key innovation or impact
-- Use hashtags like #AI #Tech #Innovation
-- Do NOT include the URL in the character count
+- Do NOT include hashtags or emojis (they will be added separately)
+- Do NOT include the URL
 
-Tweet (max {MAX_CONTENT_LENGTH} chars):"""
+Tweet content (max {MAX_CONTENT_LENGTH} chars):"""
 
     try:
         tweet_text = openrouter_call(prompt, api_key, max_tokens=150)
@@ -230,17 +343,19 @@ Tweet (max {MAX_CONTENT_LENGTH} chars):"""
             if len(tweet_text.strip()) > MAX_CONTENT_LENGTH:
                 tweet_text = tweet_text.strip()[:MAX_CONTENT_LENGTH-3] + "..."
             
-            # URL'yi ekle
-            final_tweet = f"{tweet_text.strip()}\n\n🔗 {url}"
+            # Emoji, tweet metni, hashtag'ler ve URL'yi birleştir
+            final_tweet = f"{emoji_text} {tweet_text.strip()} {hashtag_text}\n\n🔗 {url}"
             
             # Final karakter kontrolü
             if len(final_tweet) > TWITTER_LIMIT:
                 # Tekrar kısalt
-                available_chars = TWITTER_LIMIT - URL_LENGTH - 3  # "..." için
-                tweet_text = tweet_text.strip()[:available_chars] + "..."
-                final_tweet = f"{tweet_text}\n\n🔗 {url}"
+                excess = len(final_tweet) - TWITTER_LIMIT
+                tweet_text = tweet_text.strip()[:-(excess + 3)] + "..."
+                final_tweet = f"{emoji_text} {tweet_text} {hashtag_text}\n\n🔗 {url}"
             
             print(f"[DEBUG] Tweet oluşturuldu: {len(final_tweet)} karakter (limit: {TWITTER_LIMIT})")
+            print(f"[DEBUG] Hashtag'ler: {hashtag_text}")
+            print(f"[DEBUG] Emojiler: {emoji_text}")
             
             return final_tweet
         else:
@@ -253,12 +368,22 @@ Tweet (max {MAX_CONTENT_LENGTH} chars):"""
         return create_fallback_tweet(title, content, url)
 
 def create_fallback_tweet(title, content, url=""):
-    """API hatası durumunda fallback tweet oluştur - Karakter limiti kontrolü ile"""
+    """API hatası durumunda fallback tweet oluştur - Akıllı hashtag ve emoji ile"""
     try:
         # Twitter karakter limiti
         TWITTER_LIMIT = 280
         URL_LENGTH = 25  # "\n\n🔗 " + URL için
-        MAX_CONTENT_LENGTH = TWITTER_LIMIT - URL_LENGTH
+        
+        # Akıllı hashtag ve emoji oluştur
+        smart_hashtags = generate_smart_hashtags(title, content)
+        smart_emojis = generate_smart_emojis(title, content)
+        
+        hashtag_text = " ".join(smart_hashtags)
+        emoji_text = "".join(smart_emojis)
+        
+        # Hashtag ve emoji için yer ayır
+        hashtag_emoji_length = len(hashtag_text) + len(emoji_text) + 2  # 2 boşluk için
+        MAX_CONTENT_LENGTH = TWITTER_LIMIT - URL_LENGTH - hashtag_emoji_length
         
         # Başlığı temizle
         clean_title = title.strip()
@@ -267,26 +392,6 @@ def create_fallback_tweet(title, content, url=""):
         content_lower = content.lower()
         title_lower = title.lower()
         combined_text = f"{title_lower} {content_lower}"
-        
-        # Emoji seç (konuya göre)
-        if "funding" in combined_text or "investment" in combined_text or "billion" in combined_text:
-            emoji = "💰"
-        elif "launch" in combined_text or "release" in combined_text or "unveil" in combined_text:
-            emoji = "🚀"
-        elif "model" in combined_text or "AI" in combined_text:
-            emoji = "🤖"
-        elif "research" in combined_text or "development" in combined_text:
-            emoji = "🔬"
-        elif "security" in combined_text or "government" in combined_text:
-            emoji = "🔒"
-        elif "acquisition" in combined_text or "acqui-hire" in combined_text:
-            emoji = "🤝"
-        elif "queries" in combined_text or "search" in combined_text:
-            emoji = "🔍"
-        else:
-            import random
-            emojis = ["🤖", "💻", "🚀", "⚡", "🔥", "💡", "🌟", "📱", "🎯", "💰"]
-            emoji = random.choice(emojis)
         
         # Sayısal bilgileri çıkar
         import re
@@ -299,40 +404,11 @@ def create_fallback_tweet(title, content, url=""):
             if company.lower() in combined_text:
                 companies.append(company)
         
-        # Hashtag'ler oluştur
-        hashtags = []
-        if "AI" in combined_text or "artificial intelligence" in combined_text:
-            hashtags.append("#AI")
-        if "tech" in combined_text or "technology" in combined_text:
-            hashtags.append("#Tech")
-        if "funding" in combined_text or "investment" in combined_text:
-            hashtags.append("#Investment")
-        
-        # Varsayılan hashtag'ler
-        if not hashtags:
-            hashtags = ["#AI", "#Tech"]
-        
-        # Innovation ekle
-        if "#Innovation" not in hashtags:
-            hashtags.append("#Innovation")
-        
-        # Maksimum 3 hashtag
-        hashtags = hashtags[:3]
-        hashtag_text = " ".join(hashtags)
-        
-        # Tweet içeriği oluştur (karakter limiti göz önünde bulundurarak)
-        # Hashtag'ler için yer ayır
-        hashtag_length = len(hashtag_text)
-        available_chars = MAX_CONTENT_LENGTH - hashtag_length - 1  # 1 boşluk için
-        
         # Ana tweet metni oluştur
         tweet_parts = []
         
-        # Emoji ile başla
-        tweet_parts.append(emoji)
-        
         # Başlığı ekle (kısaltılmış)
-        title_chars = available_chars - 20  # Ek bilgiler için yer bırak
+        title_chars = MAX_CONTENT_LENGTH - 20  # Ek bilgiler için yer bırak
         if len(clean_title) > title_chars:
             clean_title = clean_title[:title_chars-3] + "..."
         tweet_parts.append(clean_title)
@@ -361,48 +437,73 @@ def create_fallback_tweet(title, content, url=""):
         main_text = " ".join(tweet_parts)
         
         # Karakter limiti kontrolü
-        if len(main_text) + hashtag_length + 1 > MAX_CONTENT_LENGTH:
+        if len(main_text) > MAX_CONTENT_LENGTH:
             # Çok uzunsa kısalt
-            available_for_main = MAX_CONTENT_LENGTH - hashtag_length - 1
-            main_text = main_text[:available_for_main-3] + "..."
+            main_text = main_text[:MAX_CONTENT_LENGTH-3] + "..."
         
-        # Final tweet oluştur
-        tweet_without_url = f"{main_text} {hashtag_text}"
-        
-        # URL ekle
+        # Emoji, tweet metni, hashtag'ler ve URL'yi birleştir
         if url:
-            fallback_tweet = f"{tweet_without_url}\n\n🔗 {url}"
+            fallback_tweet = f"{emoji_text} {main_text} {hashtag_text}\n\n🔗 {url}"
         else:
-            fallback_tweet = tweet_without_url
+            fallback_tweet = f"{emoji_text} {main_text} {hashtag_text}"
         
         # Final karakter kontrolü
         if len(fallback_tweet) > TWITTER_LIMIT:
             # Tekrar kısalt
             excess = len(fallback_tweet) - TWITTER_LIMIT
             main_text = main_text[:-(excess + 3)] + "..."
-            tweet_without_url = f"{main_text} {hashtag_text}"
-            fallback_tweet = f"{tweet_without_url}\n\n🔗 {url}" if url else tweet_without_url
+            if url:
+                fallback_tweet = f"{emoji_text} {main_text} {hashtag_text}\n\n🔗 {url}"
+            else:
+                fallback_tweet = f"{emoji_text} {main_text} {hashtag_text}"
         
         print(f"[FALLBACK] Tweet oluşturuldu: {len(fallback_tweet)} karakter (limit: {TWITTER_LIMIT})")
+        print(f"[FALLBACK] Hashtag'ler: {hashtag_text}")
+        print(f"[FALLBACK] Emojiler: {emoji_text}")
         
         return fallback_tweet
         
     except Exception as e:
         print(f"Fallback tweet oluşturma hatası: {e}")
-        # En basit fallback
-        simple_text = f"🤖 {title[:200]}... #AI #Tech #Innovation"
-        if url:
-            simple_tweet = f"{simple_text}\n\n🔗 {url}"
-        else:
-            simple_tweet = simple_text
-        
-        # Karakter limiti kontrolü
-        if len(simple_tweet) > TWITTER_LIMIT:
-            available = TWITTER_LIMIT - len("\n\n🔗 ") - len(url) - len(" #AI #Tech #Innovation") - 3
-            simple_text = f"🤖 {title[:available]}... #AI #Tech #Innovation"
-            simple_tweet = f"{simple_text}\n\n🔗 {url}" if url else simple_text
-        
-        return simple_tweet
+        # En basit fallback - akıllı hashtag ve emoji ile
+        try:
+            simple_hashtags = generate_smart_hashtags(title, "")[:3]  # 3 hashtag
+            simple_emojis = generate_smart_emojis(title, "")[:2]  # 2 emoji
+            
+            hashtag_text = " ".join(simple_hashtags)
+            emoji_text = "".join(simple_emojis)
+            
+            # Karakter hesaplama
+            url_length = len(f"\n\n🔗 {url}") if url else 0
+            available_chars = TWITTER_LIMIT - url_length - len(hashtag_text) - len(emoji_text) - 2
+            
+            # Başlığı kısalt
+            if len(title) > available_chars:
+                title_text = title[:available_chars-3] + "..."
+            else:
+                title_text = title
+            
+            simple_tweet = f"{emoji_text} {title_text} {hashtag_text}"
+            if url:
+                simple_tweet += f"\n\n🔗 {url}"
+            
+            return simple_tweet
+            
+        except:
+            # En son çare - basit tweet
+            simple_text = f"🤖 {title[:200]}... #AI #Innovation #Technology"
+            if url:
+                simple_tweet = f"{simple_text}\n\n🔗 {url}"
+            else:
+                simple_tweet = simple_text
+            
+            # Karakter limiti kontrolü
+            if len(simple_tweet) > TWITTER_LIMIT:
+                available = TWITTER_LIMIT - len("\n\n🔗 ") - len(url) - len(" #AI #Innovation #Technology") - 3
+                simple_text = f"🤖 {title[:available]}... #AI #Innovation #Technology"
+                simple_tweet = f"{simple_text}\n\n🔗 {url}" if url else simple_text
+            
+            return simple_tweet
 
 def setup_twitter_api():
     """X (Twitter) API kurulumu"""
@@ -864,20 +965,31 @@ def validate_automation_settings(settings):
     return errors
 
 def send_telegram_notification(message, tweet_url="", article_title=""):
-    """Telegram bot'a bildirim gönder"""
+    """Telegram bot'a bildirim gönder - Bot token env'den, Chat ID settings'den"""
     try:
-        settings = load_automation_settings()
+        # Bot token'ı environment variable'dan çek
+        bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
         
-        if not settings.get("telegram_notifications", False):
+        # Chat ID'yi settings'den çek
+        settings = load_automation_settings()
+        chat_id = settings.get("telegram_chat_id", "").strip()
+        
+        # Eğer bot token env'de yoksa settings'den dene (geriye dönük uyumluluk)
+        if not bot_token:
+            bot_token = settings.get("telegram_bot_token", "").strip()
+        
+        # Telegram bildirimleri kapalı mı kontrol et
+        if not settings.get("telegram_notifications", True):  # Varsayılan True
             print("[DEBUG] Telegram bildirimleri kapalı")
             return {"success": False, "reason": "disabled"}
         
-        bot_token = settings.get("telegram_bot_token", "").strip()
-        chat_id = settings.get("telegram_chat_id", "").strip()
-        
-        if not bot_token or not chat_id:
-            print("[WARNING] Telegram bot token veya chat ID eksik")
-            return {"success": False, "reason": "missing_credentials"}
+        if not bot_token:
+            print("[WARNING] Telegram bot token eksik. .env dosyasında TELEGRAM_BOT_TOKEN ayarlayın.")
+            return {"success": False, "reason": "missing_bot_token"}
+            
+        if not chat_id:
+            print("[WARNING] Telegram chat ID eksik. Arayüzden 'Chat ID Bul' butonu ile ayarlayın.")
+            return {"success": False, "reason": "missing_chat_id"}
         
         # Telegram mesajını hazırla
         telegram_message = f"🤖 **Yeni Tweet Paylaşıldı!**\n\n"
@@ -916,15 +1028,30 @@ def send_telegram_notification(message, tweet_url="", article_title=""):
         return {"success": False, "error": str(e)}
 
 def test_telegram_connection():
-    """Telegram bot bağlantısını test et"""
+    """Telegram bot bağlantısını test et - Bot token env'den, Chat ID settings'den"""
     try:
-        settings = load_automation_settings()
+        # Bot token'ı environment variable'dan çek
+        bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
         
-        bot_token = settings.get("telegram_bot_token", "").strip()
+        # Chat ID'yi settings'den çek
+        settings = load_automation_settings()
         chat_id = settings.get("telegram_chat_id", "").strip()
         
-        if not bot_token or not chat_id:
-            return {"success": False, "error": "Bot token veya chat ID eksik"}
+        # Eğer bot token env'de yoksa settings'den dene (geriye dönük uyumluluk)
+        if not bot_token:
+            bot_token = settings.get("telegram_bot_token", "").strip()
+        
+        if not bot_token:
+            return {
+                "success": False, 
+                "error": "Bot token eksik. .env dosyasında TELEGRAM_BOT_TOKEN ayarlayın."
+            }
+            
+        if not chat_id:
+            return {
+                "success": False, 
+                "error": "Chat ID eksik. 'Chat ID Bul' butonu ile chat ID'yi ayarlayın."
+            }
         
         # Bot bilgilerini al
         url = f"https://api.telegram.org/bot{bot_token}/getMe"
@@ -960,9 +1087,73 @@ def test_telegram_connection():
     except Exception as e:
         return {"success": False, "error": str(e)}
 
-def get_telegram_chat_id(bot_token):
-    """Bot'a mesaj gönderen kullanıcıların chat ID'lerini al"""
+def check_telegram_configuration():
+    """Telegram konfigürasyonunu kontrol et - Bot token env'den, Chat ID settings'den"""
     try:
+        # Bot token environment variable'dan
+        bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+        
+        # Chat ID settings'den
+        settings = load_automation_settings()
+        chat_id = settings.get("telegram_chat_id", "").strip()
+        
+        # Geriye dönük uyumluluk için settings'den bot token kontrol et
+        settings_bot_token = settings.get("telegram_bot_token", "").strip()
+        
+        status = {
+            "bot_token_env": bool(bot_token),
+            "bot_token_settings": bool(settings_bot_token),
+            "chat_id_set": bool(chat_id),
+            "ready": bool((bot_token or settings_bot_token) and chat_id)
+        }
+        
+        if status["ready"]:
+            if status["bot_token_env"]:
+                status["message"] = "✅ Telegram yapılandırması tamamlanmış (Bot token: ENV, Chat ID: Ayarlar)"
+            else:
+                status["message"] = "✅ Telegram yapılandırması tamamlanmış (Bot token: Ayarlar, Chat ID: Ayarlar)"
+            status["status"] = "ready"
+        elif status["bot_token_env"] or status["bot_token_settings"]:
+            if not status["chat_id_set"]:
+                status["message"] = "⚠️ Bot token var, Chat ID eksik - 'Chat ID Bul' butonu ile ayarlayın"
+                status["status"] = "partial"
+            else:
+                status["message"] = "✅ Telegram yapılandırması tamamlanmış"
+                status["status"] = "ready"
+        else:
+            status["message"] = "❌ Bot token eksik - .env dosyasında TELEGRAM_BOT_TOKEN ayarlayın"
+            status["status"] = "missing"
+            
+        return status
+        
+    except Exception as e:
+        return {
+            "bot_token_env": False,
+            "bot_token_settings": False,
+            "chat_id_set": False,
+            "ready": False,
+            "message": f"❌ Kontrol hatası: {e}",
+            "status": "error"
+        }
+
+def get_telegram_chat_id(bot_token=None):
+    """Bot'a mesaj gönderen kullanıcıların chat ID'lerini al - Environment variable'lardan token çeker"""
+    try:
+        # Eğer bot_token parametre olarak verilmemişse env'den çek
+        if not bot_token:
+            bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+            
+            # Eğer env'de yoksa settings'den dene
+            if not bot_token:
+                settings = load_automation_settings()
+                bot_token = settings.get("telegram_bot_token", "").strip()
+        
+        if not bot_token:
+            return {
+                "success": False, 
+                "error": "Bot token eksik. .env dosyasında TELEGRAM_BOT_TOKEN ayarlayın."
+            }
+        
         url = f"https://api.telegram.org/bot{bot_token}/getUpdates"
         response = requests.get(url, timeout=10)
         
@@ -989,3 +1180,86 @@ def get_telegram_chat_id(bot_token):
         
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+def save_telegram_chat_id(chat_id):
+    """Chat ID'yi otomatik olarak ayarlara kaydet"""
+    try:
+        settings = load_automation_settings()
+        settings["telegram_chat_id"] = str(chat_id).strip()
+        
+        save_result = save_automation_settings(settings)
+        
+        if save_result["success"]:
+            print(f"[SUCCESS] Chat ID otomatik kaydedildi: {chat_id}")
+            return {"success": True, "message": f"✅ Chat ID kaydedildi: {chat_id}"}
+        else:
+            print(f"[ERROR] Chat ID kaydetme hatası: {save_result['message']}")
+            return {"success": False, "error": f"Kaydetme hatası: {save_result['message']}"}
+            
+    except Exception as e:
+        print(f"[ERROR] Chat ID kaydetme hatası: {e}")
+        return {"success": False, "error": str(e)}
+
+def auto_detect_and_save_chat_id():
+    """Otomatik chat ID tespit et ve kaydet"""
+    try:
+        # Mevcut chat ID'yi kontrol et
+        settings = load_automation_settings()
+        current_chat_id = settings.get("telegram_chat_id", "").strip()
+        
+        if current_chat_id:
+            return {
+                "success": True, 
+                "message": f"Chat ID zaten ayarlanmış: {current_chat_id}",
+                "chat_id": current_chat_id,
+                "auto_detected": False
+            }
+        
+        # Chat ID'leri bul
+        result = get_telegram_chat_id()
+        
+        if not result["success"]:
+            return {
+                "success": False,
+                "error": result["error"],
+                "auto_detected": False
+            }
+        
+        chat_ids = result.get("chat_ids", [])
+        
+        if not chat_ids:
+            return {
+                "success": False,
+                "error": "Chat ID bulunamadı. Bot'a önce bir mesaj gönderin.",
+                "auto_detected": False
+            }
+        
+        # İlk chat ID'yi otomatik seç (genellikle en son mesaj)
+        selected_chat = chat_ids[0]
+        chat_id = selected_chat["chat_id"]
+        
+        # Chat ID'yi kaydet
+        save_result = save_telegram_chat_id(chat_id)
+        
+        if save_result["success"]:
+            return {
+                "success": True,
+                "message": f"✅ Chat ID otomatik tespit edildi ve kaydedildi: {chat_id}",
+                "chat_id": chat_id,
+                "chat_info": selected_chat,
+                "auto_detected": True,
+                "all_chats": chat_ids
+            }
+        else:
+            return {
+                "success": False,
+                "error": save_result["error"],
+                "auto_detected": False
+            }
+            
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "auto_detected": False
+        }

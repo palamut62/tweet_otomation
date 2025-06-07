@@ -11,7 +11,8 @@ from utils import (
     reset_all_data, clear_pending_tweets, get_data_statistics,
     load_automation_settings, save_automation_settings, get_automation_status,
     update_scheduler_settings, validate_automation_settings,
-    send_telegram_notification, test_telegram_connection, get_telegram_chat_id
+    send_telegram_notification, test_telegram_connection, get_telegram_chat_id,
+    check_telegram_configuration, save_telegram_chat_id, auto_detect_and_save_chat_id
 )
 
 load_dotenv()
@@ -211,44 +212,119 @@ with st.sidebar:
     # Telegram Ayarları
     st.header("📱 Telegram Bildirimleri")
     
+    # Telegram konfigürasyonunu kontrol et
+    config_status = check_telegram_configuration()
+    
+    # Durum göstergesi
+    if config_status["status"] == "ready":
+        st.success(config_status["message"])
+    elif config_status["status"] == "partial":
+        st.warning(config_status["message"])
+    elif config_status["status"] == "missing":
+        st.error(config_status["message"])
+    else:
+        st.error(config_status["message"])
+    
     with st.expander("🔧 Telegram Bot Ayarları", expanded=False):
         current_settings = load_automation_settings()
         
+        # Bot Token durumu
+        st.subheader("🤖 Bot Token")
+        
+        env_bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
+        settings_bot_token = current_settings.get("telegram_bot_token", "")
+        
+        if env_bot_token:
+            st.success("✅ TELEGRAM_BOT_TOKEN (Environment Variable)")
+            st.code(f"Token: {env_bot_token[:10]}...{env_bot_token[-4:] if len(env_bot_token) > 14 else ''}")
+            bot_token = env_bot_token
+        elif settings_bot_token:
+            st.info("ℹ️ Bot Token (Ayarlar Dosyası)")
+            st.code(f"Token: {settings_bot_token[:10]}...{settings_bot_token[-4:] if len(settings_bot_token) > 14 else ''}")
+            bot_token = settings_bot_token
+        else:
+            st.error("❌ Bot Token eksik")
+            st.info("📝 .env dosyasına TELEGRAM_BOT_TOKEN ekleyin veya aşağıdan manuel girin")
+            bot_token = ""
+        
+        # Chat ID durumu ve otomatik tespit
+        st.subheader("💬 Chat ID")
+        
+        current_chat_id = current_settings.get("telegram_chat_id", "")
+        
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            if current_chat_id:
+                st.success(f"✅ Chat ID ayarlanmış: {current_chat_id}")
+            else:
+                st.warning("⚠️ Chat ID ayarlanmamış")
+        
+        with col2:
+            # Otomatik Chat ID tespit butonu
+            if bot_token and st.button("🔍 Chat ID Bul & Kaydet", help="Otomatik chat ID tespit et ve kaydet"):
+                with st.spinner("Chat ID tespit ediliyor ve kaydediliyor..."):
+                    result = auto_detect_and_save_chat_id()
+                    
+                    if result["success"]:
+                        if result["auto_detected"]:
+                            st.success(result["message"])
+                            st.info(f"📋 Tespit edilen: {result['chat_info']['title']} ({result['chat_info']['type']})")
+                            
+                            # Diğer chat'ler varsa göster
+                            if len(result.get("all_chats", [])) > 1:
+                                st.info("🔍 Diğer bulunan chat'ler:")
+                                for chat in result["all_chats"][1:]:
+                                    st.text(f"• {chat['chat_id']} - {chat['title']} ({chat['type']})")
+                        else:
+                            st.info(result["message"])
+                        
+                        st.rerun()
+                    else:
+                        st.error(f"❌ {result['error']}")
+        
+        st.markdown("---")
+        
         telegram_enabled = st.checkbox(
             "📱 Telegram Bildirimleri Aktif",
-            value=current_settings.get("telegram_notifications", False),
+            value=current_settings.get("telegram_notifications", True),  # Varsayılan True
             help="Her tweet paylaşıldığında Telegram'a bildirim gönder"
         )
         
-        bot_token = st.text_input(
-            "🤖 Bot Token",
-            value=current_settings.get("telegram_bot_token", ""),
-            type="password",
-            help="@BotFather'dan aldığınız bot token'ı"
-        )
+        # Manuel ayarlar (sadece gerektiğinde)
+        if not env_bot_token:
+            st.subheader("⚙️ Manuel Bot Token")
+            st.info("💡 Environment variable yoksa buradan bot token girebilirsiniz")
+            
+            manual_bot_token = st.text_input(
+                "🤖 Bot Token (Manuel)",
+                value=settings_bot_token,
+                type="password",
+                help="@BotFather'dan aldığınız bot token'ı"
+            )
+            
+            if manual_bot_token != settings_bot_token:
+                bot_token = manual_bot_token
         
-        chat_id = st.text_input(
-            "💬 Chat ID",
-            value=current_settings.get("telegram_chat_id", ""),
-            help="Bildirimlerin gönderileceği chat ID"
-        )
-        
-        # Chat ID bulma yardımcısı
-        if bot_token and st.button("🔍 Chat ID'leri Bul"):
-            with st.spinner("Chat ID'ler aranıyor..."):
-                result = get_telegram_chat_id(bot_token)
-                if result["success"]:
-                    if result["chat_ids"]:
-                        st.success("✅ Chat ID'ler bulundu:")
-                        for chat in result["chat_ids"]:
-                            st.code(f"ID: {chat['chat_id']} | Tip: {chat['type']} | İsim: {chat['title']}")
-                    else:
-                        st.warning("⚠️ Chat ID bulunamadı. Bot'a önce bir mesaj gönderin.")
+        # Manuel Chat ID değiştirme
+        if current_chat_id:
+            st.subheader("🔧 Chat ID Değiştir")
+            
+            new_chat_id = st.text_input(
+                "💬 Yeni Chat ID",
+                value=current_chat_id,
+                help="Farklı bir chat ID kullanmak istiyorsanız"
+            )
+            
+            if new_chat_id != current_chat_id and st.button("💾 Chat ID'yi Güncelle"):
+                save_result = save_telegram_chat_id(new_chat_id)
+                if save_result["success"]:
+                    st.success(save_result["message"])
+                    st.rerun()
                 else:
-                    st.error(f"❌ Hata: {result['error']}")
+                    st.error(f"❌ {save_result['error']}")
         
         # Test butonu
-        if bot_token and chat_id and st.button("🧪 Bağlantıyı Test Et"):
+        if bot_token and current_chat_id and st.button("🧪 Bağlantıyı Test Et"):
             with st.spinner("Test mesajı gönderiliyor..."):
                 result = test_telegram_connection()
                 if result["success"]:
@@ -256,14 +332,16 @@ with st.sidebar:
                 else:
                     st.error(f"❌ Test başarısız: {result['error']}")
         
-        # Telegram ayarlarını kaydet
+        # Ayarları kaydet
         if st.button("💾 Telegram Ayarlarını Kaydet"):
             telegram_settings = current_settings.copy()
             telegram_settings.update({
-                "telegram_notifications": telegram_enabled,
-                "telegram_bot_token": bot_token.strip(),
-                "telegram_chat_id": chat_id.strip()
+                "telegram_notifications": telegram_enabled
             })
+            
+            # Manuel bot token varsa kaydet
+            if not env_bot_token and 'manual_bot_token' in locals() and manual_bot_token:
+                telegram_settings["telegram_bot_token"] = manual_bot_token.strip()
             
             save_result = save_automation_settings(telegram_settings)
             if save_result["success"]:
@@ -275,21 +353,40 @@ with st.sidebar:
         # Telegram kurulum rehberi
         if st.button("📖 Kurulum Rehberini Göster"):
             st.info("""
-            **1. Bot Oluşturma:**
-            - Telegram'da @BotFather'a mesaj gönderin
-            - `/newbot` komutunu kullanın
-            - Bot adını ve kullanıcı adını belirleyin
-            - Bot token'ınızı kopyalayın
+            **🚀 Hızlı Kurulum (Önerilen):**
             
-            **2. Chat ID Bulma:**
-            - Bot'unuza bir mesaj gönderin
-            - Yukarıdaki "Chat ID'leri Bul" butonuna tıklayın
-            - Çıkan ID'yi kopyalayın
+            1. **Bot Oluşturma:**
+               - Telegram'da @BotFather'a mesaj gönderin
+               - `/newbot` komutunu kullanın
+               - Bot adını ve kullanıcı adını belirleyin
+               - Bot token'ınızı kopyalayın
             
-            **3. Test:**
-            - Token ve Chat ID'yi girin
-            - "Bağlantıyı Test Et" butonuna tıklayın
-            - Test mesajını Telegram'da kontrol edin
+            2. **.env Dosyası Ayarlama:**
+               - Proje klasöründeki .env dosyasını açın
+               - Şu satırı ekleyin:
+               ```
+               TELEGRAM_BOT_TOKEN=your_bot_token_here
+               ```
+               (Chat ID'yi .env'e eklemenize gerek yok!)
+            
+            3. **Otomatik Chat ID Kurulumu:**
+               - Uygulamayı yeniden başlatın
+               - Bot'unuza Telegram'dan bir mesaj gönderin
+               - "🔍 Chat ID Bul & Kaydet" butonuna tıklayın
+               - Chat ID otomatik tespit edilip kaydedilecek
+            
+            4. **Test:**
+               - "🧪 Bağlantıyı Test Et" butonuna tıklayın
+               - Test mesajını Telegram'da kontrol edin
+            
+            **💡 Avantajlar:**
+            - Chat ID environment variable'da saklanmaz (daha esnek)
+            - Farklı chat'lere kolayca geçiş yapabilirsiniz
+            - Otomatik tespit ve kaydetme
+            
+            **⚙️ Manuel Ayarlar:**
+            - Environment variable yoksa manuel bot token girebilirsiniz
+            - Chat ID'yi manuel olarak da değiştirebilirsiniz
             """)
     
     # Scheduler kontrol butonları

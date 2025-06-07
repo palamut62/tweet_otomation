@@ -10,8 +10,8 @@
   "working_hours_end": "18:00",
   "weekend_enabled": true,
   "rate_limit_delay": 2.0,
+  "last_updated": "2025-06-07T07:07:04.191792",
   "telegram_notifications": true,
-  "telegram_bot_token": "7280975329:AAERclOUuyOgL-cmb7P95W50mZbZ8J4wPqo",
-      "telegram_chat_id": "7183350213",
-  "last_updated": "2025-06-06T19:07:51.398500"
+  "telegram_bot_token": "",
+  "telegram_chat_id": "7183350213"
 }
