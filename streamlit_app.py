@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from utils import (
     fetch_latest_ai_articles, summarize_article, score_article,
@@ -1133,3 +1133,85 @@ with col3:
     st.markdown("• Sidebar'dan ayarları yönetin")
     st.markdown("• MCP sekmesinden konfigürasyon")
     st.markdown("• Analiz sekmesinden raporlar")
+
+# Streamlit Cloud için otomatik kontrol sistemi
+def check_auto_control():
+    """Otomatik kontrol gerekli mi kontrol et"""
+    try:
+        automation_settings = load_automation_settings()
+        
+        # Otomatik mod kapalıysa çık
+        if not automation_settings.get("auto_mode", False):
+            return False
+        
+        # Son kontrol zamanını al
+        last_check = st.session_state.get("last_auto_check", None)
+        check_interval_hours = automation_settings.get("check_interval_hours", 3)
+        
+        if last_check is None:
+            return True
+        
+        # Zaman farkını hesapla
+        from datetime import datetime, timedelta
+        last_check_time = datetime.fromisoformat(last_check)
+        now = datetime.now()
+        time_diff = now - last_check_time
+        
+        # Kontrol aralığı geçtiyse True döndür
+        return time_diff >= timedelta(hours=check_interval_hours)
+        
+    except Exception as e:
+        print(f"Auto control check error: {e}")
+        return False
+
+# Sayfa yüklendiğinde otomatik kontrol
+if "auto_control_done" not in st.session_state:
+    st.session_state.auto_control_done = False
+
+if not st.session_state.auto_control_done and check_auto_control():
+    st.session_state.auto_control_done = True
+    st.session_state.last_auto_check = datetime.now().isoformat()
+    
+    with st.spinner("🔄 Otomatik kontrol yapılıyor..."):
+        from scheduler import run_automation_once
+        result = run_automation_once()
+        
+        if result["success"]:
+            if result.get("posted_tweets", 0) > 0:
+                st.success(f"✅ {result['posted_tweets']} tweet otomatik paylaşıldı!")
+            if result.get("pending_tweets", 0) > 0:
+                st.info(f"⏳ {result['pending_tweets']} tweet manuel onay bekliyor")
+        else:
+            st.info(f"ℹ️ Otomatik kontrol: {result['message']}")
+
+# Manuel otomatik kontrol butonu
+if st.sidebar.button("🔄 Şimdi Kontrol Et", help="Hemen otomatik kontrol yap"):
+    with st.spinner("Kontrol yapılıyor..."):
+        from scheduler import run_automation_once
+        result = run_automation_once()
+        
+        # Son kontrol zamanını güncelle
+        st.session_state.last_auto_check = datetime.now().isoformat()
+        
+        if result["success"]:
+            st.success(f"✅ {result['message']}")
+            if result.get("posted_tweets", 0) > 0:
+                st.info(f"📤 {result['posted_tweets']} tweet otomatik paylaşıldı")
+            if result.get("pending_tweets", 0) > 0:
+                st.info(f"⏳ {result['pending_tweets']} tweet manuel onay bekliyor")
+            if result.get("cleaned_articles", 0) > 0:
+                st.info(f"🧹 {result['cleaned_articles']} eski makale temizlendi")
+        else:
+            st.warning(f"⚠️ {result['message']}")
+
+# Otomatik yenileme bilgisi
+automation_settings = load_automation_settings()
+if automation_settings.get("auto_mode", False):
+    last_check = st.session_state.get("last_auto_check", None)
+    if last_check:
+        last_check_time = datetime.fromisoformat(last_check)
+        next_check = last_check_time + timedelta(hours=automation_settings.get("check_interval_hours", 3))
+        st.sidebar.info(f"🕒 Son kontrol: {last_check_time.strftime('%H:%M')}\n⏰ Sonraki: {next_check.strftime('%H:%M')}")
+    
+    st.sidebar.markdown("💡 **Streamlit Cloud İpucu:**")
+    st.sidebar.markdown("Sayfayı yenilediğinizde otomatik kontrol yapılır")

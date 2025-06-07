@@ -1,0 +1,36 @@
+name: Auto Tweet Check
+
+on:
+  schedule:
+    # Her 3 saatte bir çalış (UTC zamanı)
+    - cron: '0 */3 * * *'
+  
+  # Manuel tetikleme için
+  workflow_dispatch:
+
+jobs:
+  auto-tweet-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Trigger Streamlit App Auto Check
+        run: |
+          echo "Streamlit uygulamasına otomatik kontrol isteği gönderiliyor..."
+          
+          # Streamlit Cloud URL'nizi buraya yazın
+          STREAMLIT_URL="https://your-app.streamlit.app"
+          
+          # Otomatik kontrol parametresi ile GET request
+          curl -s -o /dev/null -w "%{http_code}" "$STREAMLIT_URL/?auto=true" || echo "Request failed"
+          
+          echo "Otomatik kontrol isteği gönderildi"
+      
+      - name: Wait and Check Again (Backup)
+        run: |
+          echo "5 dakika bekleyip tekrar kontrol..."
+          sleep 300
+          
+          STREAMLIT_URL="https://your-app.streamlit.app"
+          curl -s -o /dev/null -w "%{http_code}" "$STREAMLIT_URL/?auto=true" || echo "Backup request failed"
+          
+          echo "Backup kontrol tamamlandı" 

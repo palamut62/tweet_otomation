@@ -193,3 +193,78 @@ Sorunlar için:
 ---
 
 🤖 **AI Tweet Bot** - Otomatik haber takibi ve tweet paylaşımı için gelişmiş çözüm # tweet_otomation
+
+## 🌐 Streamlit Cloud Deployment
+
+### Streamlit Cloud'da Otomatik Tweet Paylaşımı
+
+**Önemli:** Streamlit Cloud background process'leri desteklemediği için otomatik tweet paylaşımı farklı çalışır:
+
+#### 1. **Otomatik Kontrol Sistemi:**
+- Sayfa her yenilendiğinde otomatik kontrol yapılır
+- Ayarlardaki kontrol aralığına göre çalışır
+- Manuel "🔄 Şimdi Kontrol Et" butonu ile anında kontrol
+
+#### 2. **Deployment Adımları:**
+
+1. **GitHub Repository Hazırlama:**
+   ```bash
+   git add .
+   git commit -m "Streamlit Cloud deployment"
+   git push origin main
+   ```
+
+2. **Environment Variables (Streamlit Cloud):**
+   ```
+   GOOGLE_API_KEY=your_gemini_api_key
+   TWITTER_BEARER_TOKEN=your_twitter_bearer_token
+   TWITTER_API_KEY=your_twitter_api_key
+   TWITTER_API_SECRET=your_twitter_api_secret
+   TWITTER_ACCESS_TOKEN=your_twitter_access_token
+   TWITTER_ACCESS_TOKEN_SECRET=your_twitter_access_token_secret
+   TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+   ```
+
+3. **Streamlit Cloud Ayarları:**
+   - Main file: `streamlit_app.py`
+   - Python version: 3.11
+   - Requirements: `requirements.txt`
+
+#### 3. **Otomatik Çalışma İçin:**
+
+**Seçenek 1: Manuel Yenileme**
+- Sayfayı belirli aralıklarla yenileyin
+- Otomatik kontrol yapılacak
+
+**Seçenek 2: Cron Job (Harici)**
+```bash
+# Her 3 saatte bir GET request
+curl "https://your-app.streamlit.app/?auto=true"
+```
+
+**Seçenek 3: GitHub Actions**
+```yaml
+name: Auto Tweet Check
+on:
+  schedule:
+    - cron: '0 */3 * * *'  # Her 3 saatte bir
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Streamlit App
+        run: curl "https://your-app.streamlit.app/?auto=true"
+```
+
+#### 4. **Streamlit Cloud Sınırlamaları:**
+- ❌ Background scheduler çalışmaz
+- ❌ Sürekli çalışan döngüler desteklenmez
+- ✅ HTTP request bazlı otomatik kontrol
+- ✅ Session state ile zaman takibi
+- ✅ Manuel kontrol butonları
+
+#### 5. **Önerilen Kullanım:**
+1. Otomatik modu açın
+2. Kontrol aralığını 2-3 saat yapın
+3. Sayfayı günde birkaç kez yenileyin
+4. Veya harici cron job kurun
