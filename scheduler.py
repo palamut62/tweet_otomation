@@ -21,14 +21,14 @@ load_dotenv()
 
 class AutoTweetScheduler:
     def __init__(self):
-        self.api_key = os.getenv("OPENROUTER_API_KEY")
+        self.api_key = os.getenv("GOOGLE_API_KEY")
         
         # Ayarları yükle
         self.load_settings()
         
         # API anahtarı kontrolü
         if not self.api_key:
-            print("[ERROR] OPENROUTER_API_KEY bulunamadı!")
+            print("[ERROR] GOOGLE_API_KEY bulunamadı!")
             return
         
     def load_settings(self):

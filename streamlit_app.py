@@ -19,11 +19,11 @@ from utils import (
 load_dotenv()
 
 # API anahtarları kontrolü
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 TWITTER_BEARER_TOKEN = os.getenv("TWITTER_BEARER_TOKEN")
 
-if not OPENROUTER_API_KEY:
-    st.error("❌ OPENROUTER_API_KEY .env dosyasında bulunamadı!")
+if not GOOGLE_API_KEY:
+    st.error("❌ GOOGLE_API_KEY .env dosyasında bulunamadı!")
     st.stop()
 
 # Sayfa yapılandırması
@@ -557,9 +557,9 @@ with col1:
                     # Analiz butonu
                     if st.button(f"📊 Analiz Et", key=f"analyze_{idx}"):
                         with st.spinner("Analiz ediliyor..."):
-                            score = score_article(article['content'], OPENROUTER_API_KEY)
-                            category = categorize_article(article['content'], OPENROUTER_API_KEY)
-                            summary = summarize_article(article['content'], OPENROUTER_API_KEY)
+                            score = score_article(article['content'], GOOGLE_API_KEY)
+                            category = categorize_article(article['content'], GOOGLE_API_KEY)
+                            summary = summarize_article(article['content'], GOOGLE_API_KEY)
                             
                             st.info(f"**Skor:** {score}/10 | **Kategori:** {category}")
                             st.success(f"**Özet:** {summary}")
@@ -572,7 +572,7 @@ with col1:
                     # Tweet oluştur butonu
                     if st.button(f"🐦 Tweet Oluştur", key=f"tweet_create_{idx}"):
                         with st.spinner("Tweet oluşturuluyor..."):
-                            tweet_text = generate_ai_tweet_with_content(article, OPENROUTER_API_KEY)
+                            tweet_text = generate_ai_tweet_with_content(article, GOOGLE_API_KEY)
                             st.session_state[f'generated_tweet_{idx}'] = tweet_text
                             st.success("✅ Tweet oluşturuldu!")
                             st.rerun()

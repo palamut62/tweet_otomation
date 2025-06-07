@@ -329,7 +329,7 @@ Lütfen:
 - İlgi çekici bir dil kullan
 
 Özet:"""
-    return openrouter_call(prompt, api_key, max_tokens=100)
+    return gemini_call(prompt, api_key, max_tokens=100)
 
 def score_article(article_content, api_key):
     prompt = f"""Bu AI/teknoloji haberinin önemini 1-10 arasında değerlendir (sadece sayı):
@@ -343,7 +343,7 @@ Değerlendirme kriterleri:
 - Genel ilgi
 
 Puan:"""
-    result = openrouter_call(prompt, api_key, max_tokens=5)
+    result = gemini_call(prompt, api_key, max_tokens=5)
     try:
         return int(result.strip().split()[0])
     except:
@@ -356,50 +356,50 @@ def categorize_article(article_content, api_key):
 
 Seçenekler: Developer, Investor, General
 Cevap:"""
-    return openrouter_call(prompt, api_key, max_tokens=10).strip()
+    return gemini_call(prompt, api_key, max_tokens=10).strip()
 
-def openrouter_call(prompt, api_key, max_tokens=100):
+def gemini_call(prompt, api_key, max_tokens=100):
+    """Google Gemini API çağrısı"""
     if not api_key:
-        print("API anahtarı bulunamadı")
+        print("Gemini API anahtarı bulunamadı")
         return "API anahtarı eksik"
     
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "HTTP-Referer": "https://yourdomain.com",
-        "X-Title": "VibeAI",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "model": "deepseek/deepseek-chat-v3-0324:free",  # Daha güvenilir model
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.7,
-        "max_tokens": max_tokens
-    }
-    
     try:
-        print(f"[DEBUG] API çağrısı yapılıyor... Model: {payload['model']}")
-        r = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload, timeout=30)
+        import google.generativeai as genai
         
-        print(f"[DEBUG] API Yanıt Kodu: {r.status_code}")
+        # API anahtarını yapılandır
+        genai.configure(api_key=api_key)
         
-        if r.status_code != 200:
-            print(f"API Hatası: Durum Kodu {r.status_code}, Yanıt: {r.text}")
+        # Modeli oluştur
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        
+        print(f"[DEBUG] Gemini API çağrısı yapılıyor... Model: gemini-2.0-flash")
+        
+        # Generation config
+        generation_config = genai.types.GenerationConfig(
+            max_output_tokens=max_tokens,
+            temperature=0.7,
+        )
+        
+        # API çağrısı
+        response = model.generate_content(
+            prompt,
+            generation_config=generation_config
+        )
+        
+        print(f"[DEBUG] Gemini API Yanıtı alındı")
+        
+        if response.text:
+            content = response.text.strip()
+            print(f"[DEBUG] İçerik alındı: {len(content)} karakter")
+            return content
+        else:
+            print("[DEBUG] Gemini API yanıtında metin bulunamadı")
             return "API hatası"
-
-        response_json = r.json()
-        print(f"[DEBUG] API Yanıtı alındı: {len(str(response_json))} karakter")
-        
-        if "choices" not in response_json or not response_json["choices"]:
-            print(f"API Yanıtında 'choices' anahtarı bulunamadı. Yanıt: {response_json}")
-            return "Yanıt formatı hatalı"
-        
-        content = response_json["choices"][0]["message"]["content"]
-        print(f"[DEBUG] İçerik alındı: {len(content)} karakter")
-        return content.strip()
-        
+            
     except Exception as e:
-        print(f"OpenRouter API çağrı hatası: {e}")
-        return "Bağlantı hatası"
+        print(f"[DEBUG] Gemini API çağrı hatası: {e}")
+        return "API hatası"
 
 def generate_smart_hashtags(title, content):
     """Makale içeriğine göre akıllı hashtag oluşturma - 5 popüler hashtag"""
@@ -505,8 +505,178 @@ def generate_smart_emojis(title, content):
     # En fazla 3 emoji seç
     return emojis[:3]
 
+def generate_comprehensive_analysis(article_data, api_key):
+    """Makale için kapsamlı AI analizi - Ayrı ayrı çağrılar ile güvenilir sonuç"""
+    title = article_data.get("title", "")
+    content = article_data.get("content", "")
+    
+    print(f"🔍 Kapsamlı AI analizi başlatılıyor...")
+    
+    analysis_result = {
+        "innovation": "",
+        "companies": [],
+        "impact_level": 5,
+        "audience": "General",
+        "hashtags": [],
+        "emojis": [],
+        "tweet_text": ""
+    }
+    
+    try:
+        # 1. Ana yenilik/buluş analizi
+        innovation_prompt = f"""Bu AI/teknoloji haberindeki ana yenilik veya buluşu kısaca açıkla (maksimum 50 kelime):
+
+Başlık: {title}
+İçerik: {content[:800]}
+
+Ana yenilik:"""
+        
+        innovation = gemini_call(innovation_prompt, api_key, max_tokens=80)
+        analysis_result["innovation"] = innovation.strip() if innovation != "API hatası" else "Teknoloji gelişimi"
+        
+        # 2. Şirket analizi
+        company_prompt = f"""Bu haberde bahsedilen ana şirketleri listele (maksimum 3 şirket, virgülle ayır):
+
+Başlık: {title}
+İçerik: {content[:600]}
+
+Şirketler:"""
+        
+        companies_text = gemini_call(company_prompt, api_key, max_tokens=50)
+        if companies_text != "API hatası":
+            companies = [c.strip() for c in companies_text.split(",") if c.strip()]
+            analysis_result["companies"] = companies[:3]
+        
+        # 3. Etki seviyesi analizi
+        impact_prompt = f"""Bu haberin teknoloji sektöründeki etkisini 1-10 arasında değerlendir (sadece sayı):
+
+Başlık: {title}
+İçerik: {content[:600]}
+
+Etki skoru (1-10):"""
+        
+        impact_text = gemini_call(impact_prompt, api_key, max_tokens=10)
+        try:
+            impact_level = int(impact_text.strip().split()[0])
+            if 1 <= impact_level <= 10:
+                analysis_result["impact_level"] = impact_level
+        except:
+            analysis_result["impact_level"] = 5
+        
+        # 4. Hedef kitle analizi
+        audience_prompt = f"""Bu haberin hedef kitlesini belirle (Developer/Investor/General):
+
+Başlık: {title}
+İçerik: {content[:500]}
+
+Hedef kitle:"""
+        
+        audience = gemini_call(audience_prompt, api_key, max_tokens=15)
+        if audience != "API hatası" and audience.strip() in ["Developer", "Investor", "General"]:
+            analysis_result["audience"] = audience.strip()
+        
+        # 5. Hashtag analizi - AI + akıllı sistem kombinasyonu
+        hashtag_prompt = f"""Bu haber için en alakalı 3 hashtag öner. Sadece hashtag'leri yaz, virgülle ayır:
+
+Başlık: {title}
+İçerik: {content[:800]}
+
+Örnek: #AI, #Technology, #Innovation
+
+Hashtag'ler:"""
+        
+        ai_hashtags_text = gemini_call(hashtag_prompt, api_key, max_tokens=50)
+        ai_hashtags = []
+        
+        if ai_hashtags_text != "API hatası":
+            # AI'den gelen hashtag'leri temizle ve parse et
+            clean_text = ai_hashtags_text.replace("Hashtag'ler:", "").replace("Hashtag'ler", "").strip()
+            
+            # Virgül veya boşlukla ayrılmış hashtag'leri bul
+            import re
+            hashtag_matches = re.findall(r'#\w+', clean_text)
+            
+            # Eğer # ile başlayan bulunamazsa, kelimeleri hashtag yap
+            if not hashtag_matches:
+                words = re.findall(r'\b[A-Za-z][A-Za-z0-9]*\b', clean_text)
+                for word in words[:3]:
+                    if len(word) > 2:
+                        ai_hashtags.append(f"#{word}")
+            else:
+                ai_hashtags = hashtag_matches[:3]
+        
+        # Akıllı hashtag sistemi ile birleştir
+        smart_hashtags = generate_smart_hashtags(title, content)
+        
+        # AI ve akıllı hashtag'leri birleştir (AI öncelikli, 3 hashtag)
+        combined_hashtags = []
+        for tag in ai_hashtags[:3]:  # AI'den en fazla 3
+            if tag not in combined_hashtags:
+                combined_hashtags.append(tag)
+        
+        # Eksik varsa akıllı sistemden tamamla
+        for tag in smart_hashtags:
+            if tag not in combined_hashtags and len(combined_hashtags) < 3:
+                combined_hashtags.append(tag)
+        
+        analysis_result["hashtags"] = combined_hashtags[:3]
+        
+        # 6. Emoji analizi
+        emoji_prompt = f"""Bu haber için en uygun 3 emoji öner (sadece emojiler, boşluksuz):
+
+Başlık: {title}
+İçerik: {content[:500]}
+
+Emojiler:"""
+        
+        ai_emojis_text = gemini_call(emoji_prompt, api_key, max_tokens=20)
+        ai_emojis = []
+        
+        if ai_emojis_text != "API hatası":
+            # Emoji'leri çıkar
+            import re
+            emoji_pattern = re.compile(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF\U00002702-\U000027B0\U000024C2-\U0001F251]+')
+            found_emojis = emoji_pattern.findall(ai_emojis_text)
+            for emoji in found_emojis:
+                for single_emoji in emoji:
+                    if single_emoji not in ai_emojis and len(ai_emojis) < 3:
+                        ai_emojis.append(single_emoji)
+        
+        # Akıllı emoji sistemi ile birleştir
+        smart_emojis = generate_smart_emojis(title, content)
+        
+        # AI ve akıllı emoji'leri birleştir
+        combined_emojis = ai_emojis[:2]  # AI'den en fazla 2
+        for emoji in smart_emojis:
+            if emoji not in combined_emojis and len(combined_emojis) < 3:
+                combined_emojis.append(emoji)
+        
+        analysis_result["emojis"] = combined_emojis[:3]
+        
+        print(f"✅ Kapsamlı analiz tamamlandı:")
+        print(f"🔬 Yenilik: {analysis_result['innovation'][:50]}...")
+        print(f"🏢 Şirketler: {', '.join(analysis_result['companies'])}")
+        print(f"🎯 Kitle: {analysis_result['audience']}")
+        print(f"🏷️ Hashtag'ler: {' '.join(analysis_result['hashtags'])}")
+        print(f"😊 Emojiler: {''.join(analysis_result['emojis'])}")
+        
+        return analysis_result
+        
+    except Exception as e:
+        print(f"❌ Kapsamlı analiz hatası: {e}")
+        # Fallback analiz
+        return {
+            "innovation": "AI/teknoloji gelişimi",
+            "companies": [],
+            "impact_level": 5,
+            "audience": "General",
+            "hashtags": generate_smart_hashtags(title, content)[:3],
+            "emojis": generate_smart_emojis(title, content)[:3],
+            "tweet_text": ""
+        }
+
 def generate_ai_tweet_with_mcp_analysis(article_data, api_key):
-    """MCP verisi ile gelişmiş AI tweet oluşturma - Derin analiz ve akıllı hashtag"""
+    """MCP verisi ile gelişmiş AI tweet oluşturma - Kapsamlı analiz ile"""
     title = article_data.get("title", "")
     content = article_data.get("content", "")
     url = article_data.get("url", "")
@@ -518,84 +688,140 @@ def generate_ai_tweet_with_mcp_analysis(article_data, api_key):
     
     print(f"🤖 AI ile tweet oluşturuluyor (kaynak: {source})...")
     
-    # Gelişmiş AI analizi için prompt
-    analysis_prompt = f"""Analyze this AI/tech article and create a comprehensive analysis:
-
-Title: {title}
-Content: {content[:1500]}
-
-Please provide:
-1. Key innovation or breakthrough
-2. Main companies/technologies involved
-3. Industry impact level (1-10)
-4. Target audience (Developer/Investor/General)
-5. 5 most relevant hashtags (trending and specific)
-6. 3 appropriate emojis
-7. Engaging tweet text (max 180 chars, English only)
-
-Format your response as JSON:
-{{
-    "innovation": "brief description",
-    "companies": ["company1", "company2"],
-    "impact_level": 8,
-    "audience": "Developer",
-    "hashtags": ["#AI", "#MachineLearning", "#Innovation", "#TechNews", "#Startup"],
-    "emojis": ["🤖", "🚀", "💡"],
-    "tweet_text": "engaging tweet content here"
-}}"""
-
     try:
-        # AI analizi yap
-        analysis_result = openrouter_call(analysis_prompt, api_key, max_tokens=300)
+        # Kapsamlı analiz yap
+        analysis = generate_comprehensive_analysis(article_data, api_key)
         
-        if analysis_result and analysis_result != "API hatası":
-            try:
-                # JSON parse et
-                import json
-                analysis = json.loads(analysis_result)
-                
-                # Analiz sonuçlarını al
-                tweet_text = analysis.get("tweet_text", "")
-                hashtags = analysis.get("hashtags", [])[:5]  # Maksimum 5
-                emojis = analysis.get("emojis", [])[:3]  # Maksimum 3
-                
-                # Hashtag ve emoji metinlerini oluştur
-                hashtag_text = " ".join(hashtags) if hashtags else ""
-                emoji_text = "".join(emojis) if emojis else ""
-                
-                # Karakter hesaplama
-                hashtag_emoji_length = len(hashtag_text) + len(emoji_text) + 2
-                available_chars = TWITTER_LIMIT - URL_LENGTH - hashtag_emoji_length
-                
-                # Tweet metnini kısalt
-                if len(tweet_text) > available_chars:
-                    tweet_text = tweet_text[:available_chars-3] + "..."
-                
-                # Final tweet oluştur
-                final_tweet = f"{emoji_text} {tweet_text} {hashtag_text}\n\n🔗 {url}"
-                
-                # Son karakter kontrolü
-                if len(final_tweet) > TWITTER_LIMIT:
-                    excess = len(final_tweet) - TWITTER_LIMIT
-                    tweet_text = tweet_text[:-(excess + 3)] + "..."
-                    final_tweet = f"{emoji_text} {tweet_text} {hashtag_text}\n\n🔗 {url}"
-                
-                print(f"✅ AI analizi ile tweet oluşturuldu: {len(final_tweet)} karakter")
-                print(f"🏷️ AI Hashtag'ler: {hashtag_text}")
-                print(f"😊 AI Emojiler: {emoji_text}")
-                print(f"📊 Etki Seviyesi: {analysis.get('impact_level', 'N/A')}")
-                print(f"🎯 Hedef Kitle: {analysis.get('audience', 'N/A')}")
-                
-                return final_tweet
-                
-            except json.JSONDecodeError as json_error:
-                print(f"⚠️ AI analizi JSON parse hatası: {json_error}")
-                print("🔄 Fallback yönteme geçiliyor...")
-                return generate_ai_tweet_with_content_fallback(article_data, api_key)
+        # Tweet metni oluştur
+        companies_text = ', '.join(analysis['companies'][:2]) if analysis['companies'] else ""
+        
+        tweet_prompt = f"""Create a compelling English tweet about this AI/tech breakthrough:
+
+Title: {title[:120]}
+Key Innovation: {analysis['innovation'][:120]}
+Companies: {companies_text}
+
+Requirements:
+- Write in perfect English only
+- Maximum 200 characters
+- Make it clear, engaging and newsworthy
+- Focus on WHAT changed and WHY it matters
+- Use active voice and strong action verbs
+- Include specific details when possible (numbers, capabilities)
+- Make it accessible to general audience
+- Sound exciting but credible
+- Do NOT include hashtags, emojis, URLs, or impact levels (added separately)
+- Do NOT mention impact, effect level, or rating in the tweet
+
+Examples of good style:
+- "OpenAI's new model achieves 95% accuracy in medical diagnosis"
+- "Tesla's robot now performs complex assembly tasks autonomously"
+- "Google's AI reduces data center energy consumption by 40%"
+
+Tweet text:"""
+        
+        tweet_text = gemini_call(tweet_prompt, api_key, max_tokens=80)
+        
+        if tweet_text == "API hatası" or not tweet_text.strip():
+            # Fallback tweet metni - daha anlamlı
+            if analysis['companies'] and analysis['innovation']:
+                company = analysis['companies'][0]
+                innovation = analysis['innovation'][:100]
+                # Daha anlamlı fallback tweet oluştur
+                if "launch" in innovation.lower():
+                    tweet_text = f"{company} launches {innovation.lower().replace('launch', '').strip()}"
+                elif "announce" in innovation.lower():
+                    tweet_text = f"{company} announces {innovation.lower().replace('announce', '').strip()}"
+                elif "develop" in innovation.lower():
+                    tweet_text = f"{company} develops {innovation.lower().replace('develop', '').strip()}"
+                else:
+                    tweet_text = f"{company} unveils {innovation}"
+            elif analysis['innovation']:
+                tweet_text = f"Breaking: {analysis['innovation'][:150]}"
+            else:
+                tweet_text = f"AI breakthrough: {title[:120]}"
+        
+        # Tweet metnini temizle
+        tweet_text = tweet_text.replace("Tweet:", "").replace("Tweet metni:", "").strip()
+        
+        # Gereksiz karakterleri temizle
+        tweet_text = tweet_text.replace('"', '').replace("'", "'").strip()
+        
+        # Impact/etki bilgilerini temizle
+        import re
+        # "impact: orta", "etki: yüksek", "effect: medium" gibi ifadeleri kaldır
+        tweet_text = re.sub(r'\b(impact|etki|effect)\s*:\s*\w+\b', '', tweet_text, flags=re.IGNORECASE)
+        # "(impact: medium)", "[etki: yüksek]" gibi parantez içindeki ifadeleri kaldır
+        tweet_text = re.sub(r'[\(\[\{]\s*(impact|etki|effect)\s*:\s*\w+\s*[\)\]\}]', '', tweet_text, flags=re.IGNORECASE)
+        # Fazla boşlukları temizle
+        tweet_text = re.sub(r'\s+', ' ', tweet_text).strip()
+        
+        # Hashtag ve emoji metinlerini oluştur
+        hashtag_text = " ".join(analysis['hashtags']).strip()
+        emoji_text = "".join(analysis['emojis']).strip()
+        url_part = f"\n\n🔗 {url}"
+        
+        # Sabit kısımların uzunluğu
+        fixed_parts_length = len(emoji_text) + len(hashtag_text) + len(url_part) + 2  # 2 boşluk için
+        available_chars = TWITTER_LIMIT - fixed_parts_length
+        
+        # Tweet metnini temizle ve kısalt
+        tweet_text = tweet_text.strip()
+        
+        # Eğer tweet metni çok uzunsa kısalt
+        if len(tweet_text) > available_chars:
+            # "..." için 3 karakter ayır
+            tweet_text = tweet_text[:available_chars-3] + "..."
+        
+        # Final tweet oluştur - boşlukları optimize et
+        if emoji_text and tweet_text:
+            # Emoji varsa emoji ile tweet arasında tek boşluk
+            main_content = f"{emoji_text} {tweet_text}"
         else:
-            print("⚠️ AI analizi başarısız, fallback yönteme geçiliyor...")
-            return generate_ai_tweet_with_content_fallback(article_data, api_key)
+            # Emoji yoksa direkt tweet
+            main_content = tweet_text
+        
+        if hashtag_text:
+            # Hashtag varsa tek boşluk ile ekle
+            final_tweet = f"{main_content} {hashtag_text}{url_part}"
+        else:
+            # Hashtag yoksa direkt URL ekle
+            final_tweet = f"{main_content}{url_part}"
+        
+        # Son güvenlik kontrolü - eğer hala uzunsa daha agresif kısalt
+        if len(final_tweet) > TWITTER_LIMIT:
+            excess = len(final_tweet) - TWITTER_LIMIT
+            # Tweet metninden fazlalığı çıkar
+            new_tweet_length = len(tweet_text) - excess - 3  # 3 "..." için
+            if new_tweet_length > 10:  # Minimum 10 karakter bırak
+                tweet_text = tweet_text[:new_tweet_length] + "..."
+            else:
+                # Çok kısa kalırsa hashtag'leri azalt
+                hashtag_text = " ".join(analysis['hashtags'][:2])  # 2 hashtag
+                fixed_parts_length = len(emoji_text) + len(hashtag_text) + len(url_part) + 1  # 1 boşluk
+                available_chars = TWITTER_LIMIT - fixed_parts_length
+                tweet_text = tweet_text[:available_chars-3] + "..."
             
+            # Yeniden oluştur
+            if emoji_text and tweet_text:
+                main_content = f"{emoji_text} {tweet_text}"
+            else:
+                main_content = tweet_text
+            
+            if hashtag_text:
+                final_tweet = f"{main_content} {hashtag_text}{url_part}"
+            else:
+                final_tweet = f"{main_content}{url_part}"
+        
+        print(f"✅ AI analizi ile tweet oluşturuldu: {len(final_tweet)} karakter")
+        print(f"📝 Tweet metni: {len(tweet_text)} karakter")
+        print(f"🏷️ AI Hashtag'ler: {hashtag_text} ({len(hashtag_text)} karakter)")
+        print(f"😊 AI Emojiler: {emoji_text} ({len(emoji_text)} karakter)")
+        print(f"🔗 URL kısmı: {len(url_part)} karakter")
+        print(f"🎯 Hedef Kitle: {analysis['audience']}")
+        
+        return final_tweet
+        
     except Exception as e:
         print(f"❌ AI tweet oluşturma hatası: {e}")
         print("🔄 Fallback yönteme geçiliyor...")
@@ -632,46 +858,84 @@ def generate_ai_tweet_with_content_fallback(article_data, api_key):
     smart_hashtags = generate_smart_hashtags(title, content)
     smart_emojis = generate_smart_emojis(title, content)
     
-    hashtag_text = " ".join(smart_hashtags)
-    emoji_text = "".join(smart_emojis)
+    hashtag_text = " ".join(smart_hashtags).strip()
+    emoji_text = "".join(smart_emojis).strip()
     
     # Hashtag ve emoji için yer ayır
     hashtag_emoji_length = len(hashtag_text) + len(emoji_text) + 2  # 2 boşluk için
     MAX_CONTENT_LENGTH = TWITTER_LIMIT - URL_LENGTH - hashtag_emoji_length
     
-    # İngilizce tweet için prompt (hashtag'siz)
-    prompt = f"""Create an engaging English tweet about this AI/tech news article. 
+    # İngilizce tweet için gelişmiş prompt
+    prompt = f"""Create a compelling English tweet about this AI/tech breakthrough:
 
 Article Title: {title}
 Article Content: {content[:1000]}
 
 Requirements:
-- Write in English only
+- Write in perfect English only
 - Maximum {MAX_CONTENT_LENGTH} characters
-- Make it engaging and informative
-- Focus on the key innovation or impact
-- Do NOT include hashtags or emojis (they will be added separately)
-- Do NOT include the URL
+- Make it clear, engaging and newsworthy
+- Focus on WHAT changed and WHY it matters
+- Use active voice and strong action verbs
+- Include specific details when possible (numbers, capabilities, improvements)
+- Make it accessible to general audience
+- Sound exciting but credible
+- Avoid jargon and technical terms
+- Do NOT include hashtags, emojis, URLs, or impact levels (added separately)
+- Do NOT mention impact, effect level, or rating in the tweet
 
-Tweet content (max {MAX_CONTENT_LENGTH} chars):"""
+Examples of good style:
+- "OpenAI's new model achieves 95% accuracy in medical diagnosis"
+- "Tesla's robot now performs complex assembly tasks autonomously"
+- "Google's AI reduces data center energy consumption by 40%"
+- "Meta's VR headset delivers 4K resolution at half the price"
+
+Tweet text (max {MAX_CONTENT_LENGTH} chars):"""
 
     try:
-        tweet_text = openrouter_call(prompt, api_key, max_tokens=150)
+        tweet_text = gemini_call(prompt, api_key, max_tokens=150)
         
         if tweet_text and len(tweet_text.strip()) > 10:
+            # Tweet metnini temizle
+            import re
+            # Impact/etki bilgilerini temizle
+            tweet_text = re.sub(r'\b(impact|etki|effect)\s*:\s*\w+\b', '', tweet_text, flags=re.IGNORECASE)
+            tweet_text = re.sub(r'[\(\[\{]\s*(impact|etki|effect)\s*:\s*\w+\s*[\)\]\}]', '', tweet_text, flags=re.IGNORECASE)
+            tweet_text = re.sub(r'\s+', ' ', tweet_text).strip()
+            
             # Karakter limiti kontrolü
             if len(tweet_text.strip()) > MAX_CONTENT_LENGTH:
                 tweet_text = tweet_text.strip()[:MAX_CONTENT_LENGTH-3] + "..."
             
-            # Emoji, tweet metni, hashtag'ler ve URL'yi birleştir
-            final_tweet = f"{emoji_text} {tweet_text.strip()} {hashtag_text}\n\n🔗 {url}"
+            # Emoji, tweet metni, hashtag'ler ve URL'yi birleştir - boşlukları optimize et
+            parts = []
+            if emoji_text:
+                parts.append(emoji_text)
+            if tweet_text.strip():
+                parts.append(tweet_text.strip())
+            if hashtag_text:
+                parts.append(hashtag_text)
+            
+            main_content = " ".join(parts)
+            final_tweet = f"{main_content}\n\n🔗 {url}"
             
             # Final karakter kontrolü
             if len(final_tweet) > TWITTER_LIMIT:
                 # Tekrar kısalt
                 excess = len(final_tweet) - TWITTER_LIMIT
                 tweet_text = tweet_text.strip()[:-(excess + 3)] + "..."
-                final_tweet = f"{emoji_text} {tweet_text} {hashtag_text}\n\n🔗 {url}"
+                
+                # Yeniden birleştir - boşlukları optimize et
+                parts = []
+                if emoji_text:
+                    parts.append(emoji_text)
+                if tweet_text:
+                    parts.append(tweet_text)
+                if hashtag_text:
+                    parts.append(hashtag_text)
+                
+                main_content = " ".join(parts)
+                final_tweet = f"{main_content}\n\n🔗 {url}"
             
             print(f"[FALLBACK] Tweet oluşturuldu: {len(final_tweet)} karakter (limit: {TWITTER_LIMIT})")
             print(f"[FALLBACK] Hashtag'ler: {hashtag_text}")
@@ -698,8 +962,8 @@ def create_fallback_tweet(title, content, url=""):
         smart_hashtags = generate_smart_hashtags(title, content)
         smart_emojis = generate_smart_emojis(title, content)
         
-        hashtag_text = " ".join(smart_hashtags)
-        emoji_text = "".join(smart_emojis)
+        hashtag_text = " ".join(smart_hashtags).strip()
+        emoji_text = "".join(smart_emojis).strip()
         
         # Hashtag ve emoji için yer ayır
         hashtag_emoji_length = len(hashtag_text) + len(emoji_text) + 2  # 2 boşluk için
@@ -724,34 +988,66 @@ def create_fallback_tweet(title, content, url=""):
             if company.lower() in combined_text:
                 companies.append(company)
         
-        # Ana tweet metni oluştur
+        # Ana tweet metni oluştur - daha anlamlı İngilizce
         tweet_parts = []
         
-        # Başlığı ekle (kısaltılmış)
-        title_chars = MAX_CONTENT_LENGTH - 20  # Ek bilgiler için yer bırak
-        if len(clean_title) > title_chars:
-            clean_title = clean_title[:title_chars-3] + "..."
-        tweet_parts.append(clean_title)
-        
-        # Şirket bilgisi ekle
+        # Şirket ve eylem bazlı tweet oluştur
         if companies:
             main_company = companies[0]
-            if "acquisition" in combined_text:
-                tweet_parts.append(f"{main_company} makes strategic acquisition")
-            elif "funding" in combined_text:
-                tweet_parts.append(f"{main_company} secures funding")
-            elif "launch" in combined_text:
-                tweet_parts.append(f"{main_company} launches innovation")
+            
+            # Eyleme göre anlamlı cümle oluştur
+            if "acquisition" in combined_text or "acquire" in combined_text:
+                if "billion" in combined_text:
+                    tweet_parts.append(f"{main_company} completes major acquisition")
+                else:
+                    tweet_parts.append(f"{main_company} acquires strategic company")
+            elif "funding" in combined_text or "investment" in combined_text:
+                if numbers:
+                    largest_num = max(numbers, key=lambda x: float(x[0]))
+                    if largest_num[1].lower() == 'billion':
+                        tweet_parts.append(f"{main_company} raises ${largest_num[0]}B in funding")
+                    elif largest_num[1].lower() == 'million':
+                        tweet_parts.append(f"{main_company} secures ${largest_num[0]}M investment")
+                    else:
+                        tweet_parts.append(f"{main_company} secures major funding")
+                else:
+                    tweet_parts.append(f"{main_company} secures new funding round")
+            elif "launch" in combined_text or "release" in combined_text:
+                if "ai" in combined_text or "artificial intelligence" in combined_text:
+                    tweet_parts.append(f"{main_company} launches new AI technology")
+                elif "robot" in combined_text:
+                    tweet_parts.append(f"{main_company} unveils advanced robotics")
+                else:
+                    tweet_parts.append(f"{main_company} releases breakthrough innovation")
+            elif "partnership" in combined_text or "partner" in combined_text:
+                tweet_parts.append(f"{main_company} forms strategic partnership")
+            elif "breakthrough" in combined_text or "innovation" in combined_text:
+                tweet_parts.append(f"{main_company} achieves major breakthrough")
             else:
-                tweet_parts.append(f"{main_company} announces breakthrough")
+                # Başlığı kullan ama şirket adını öne çıkar
+                clean_title_short = clean_title.replace(main_company, "").strip()
+                if clean_title_short:
+                    tweet_parts.append(f"{main_company}: {clean_title_short[:80]}")
+                else:
+                    tweet_parts.append(f"{main_company} makes major announcement")
+        else:
+            # Şirket yoksa başlığı kullan
+            if "ai" in combined_text or "artificial intelligence" in combined_text:
+                tweet_parts.append(f"AI breakthrough: {clean_title[:100]}")
+            elif "robot" in combined_text:
+                tweet_parts.append(f"Robotics advance: {clean_title[:100]}")
+            else:
+                tweet_parts.append(f"Tech news: {clean_title[:120]}")
         
-        # Sayısal bilgi ekle
-        if numbers:
+        # Sayısal bilgi ekle (eğer henüz eklenmemişse)
+        if numbers and not any("$" in part for part in tweet_parts):
             largest_num = max(numbers, key=lambda x: float(x[0]))
-            if largest_num[1].lower() in ['billion']:
-                tweet_parts.append(f"${largest_num[0]}B impact")
-            elif largest_num[1].lower() in ['million']:
-                tweet_parts.append(f"{largest_num[0]}M milestone")
+            if largest_num[1].lower() == 'billion':
+                tweet_parts.append(f"(${largest_num[0]}B)")
+            elif largest_num[1].lower() == 'million':
+                tweet_parts.append(f"({largest_num[0]}M)")
+            elif largest_num[1].lower() in ['%', 'percent']:
+                tweet_parts.append(f"({largest_num[0]}% improvement)")
         
         # Tweet'i birleştir
         main_text = " ".join(tweet_parts)
