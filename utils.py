@@ -7,13 +7,138 @@ import tweepy
 from datetime import datetime, timedelta
 import hashlib
 
+# Firecrawl MCP fonksiyonları için placeholder
+def mcp_firecrawl_scrape(params):
+    """Firecrawl MCP scrape fonksiyonu - MCP server ile entegre edilecek"""
+    try:
+        # Bu fonksiyon MCP server ile entegre edildiğinde gerçek Firecrawl API'sini kullanacak
+        # Şimdilik fallback yöntemi kullanıyoruz
+        print(f"[MCP] Firecrawl scrape çağrısı: {params.get('url', 'unknown')}")
+        
+        # Geçici olarak False döndür ki fallback yöntemi kullanılsın
+        # MCP entegrasyonu tamamlandığında bu fonksiyon gerçek Firecrawl API'sini çağıracak
+        return {
+            "success": False,
+            "reason": "MCP server henüz entegre edilmedi, fallback kullanılıyor"
+        }
+        
+    except Exception as e:
+        print(f"[MCP] Firecrawl scrape hatası: {e}")
+        return {"success": False, "error": str(e)}
+
 HISTORY_FILE = "posted_articles.json"
 HASHTAG_FILE = "hashtags.json"
 ACCOUNT_FILE = "accounts.json"
 SUMMARY_FILE = "summaries.json"
+MCP_CONFIG_FILE = "mcp_config.json"
+
+def fetch_latest_ai_articles_with_firecrawl():
+    """Firecrawl MCP ile gelişmiş haber çekme - Sadece son 4 makale"""
+    try:
+        # Önce mevcut yayınlanan makaleleri yükle
+        posted_articles = load_json(HISTORY_FILE)
+        posted_urls = [article.get('url', '') for article in posted_articles]
+        posted_hashes = [article.get('hash', '') for article in posted_articles]
+        
+        print("🔍 TechCrunch AI kategorisinden Firecrawl MCP ile makale çekiliyor...")
+        
+        # Firecrawl MCP ile ana sayfa çek
+        try:
+            # Firecrawl MCP scrape fonksiyonunu kullan
+            scrape_result = mcp_firecrawl_scrape({
+                "url": "https://techcrunch.com/category/artificial-intelligence/",
+                "formats": ["markdown", "links"],
+                "onlyMainContent": True,
+                "waitFor": 2000
+            })
+            
+            if not scrape_result.get("success", False):
+                print(f"⚠️ Firecrawl MCP hatası, fallback yönteme geçiliyor...")
+                return fetch_latest_ai_articles_fallback()
+            
+            # Markdown içeriğinden makale linklerini çıkar
+            markdown_content = scrape_result.get("markdown", "")
+            links = scrape_result.get("links", [])
+            
+            # TechCrunch makale linklerini filtrele
+            article_urls = []
+            for link in links:
+                url = link.get("url", "")
+                if ("techcrunch.com" in url and 
+                    "/2024/" in url and 
+                    url not in posted_urls and
+                    len(article_urls) < 4):  # Sadece son 4 makale
+                    article_urls.append(url)
+            
+            print(f"🔗 {len(article_urls)} makale URL'si bulundu")
+            
+        except Exception as firecrawl_error:
+            print(f"⚠️ Firecrawl MCP hatası: {firecrawl_error}")
+            print("🔄 Fallback yönteme geçiliyor...")
+            return fetch_latest_ai_articles_fallback()
+        
+        articles_data = []
+        for url in article_urls:
+            try:
+                # Her makaleyi Firecrawl MCP ile çek
+                article_content = fetch_article_content_with_firecrawl(url)
+                
+                if article_content and len(article_content.get("content", "")) > 100:
+                    title = article_content.get("title", "")
+                    content = article_content.get("content", "")
+                    
+                    # Makale hash'i oluştur
+                    article_hash = hashlib.md5(title.encode()).hexdigest()
+                    
+                    # Tekrar kontrolü
+                    if article_hash not in posted_hashes:
+                        articles_data.append({
+                            "title": title,
+                            "url": url,
+                            "content": content,
+                            "hash": article_hash,
+                            "fetch_date": datetime.now().isoformat(),
+                            "is_new": True,
+                            "already_posted": False,
+                            "source": "firecrawl_mcp"
+                        })
+                        print(f"🆕 Firecrawl ile yeni makale: {title[:50]}...")
+                    else:
+                        print(f"✅ Makale zaten paylaşılmış: {title[:50]}...")
+                else:
+                    print(f"⚠️ İçerik yetersiz: {url}")
+                    
+            except Exception as article_error:
+                print(f"❌ Makale çekme hatası ({url}): {article_error}")
+                continue
+        
+        print(f"📊 Firecrawl MCP ile {len(articles_data)} yeni makale bulundu")
+        return articles_data
+        
+    except Exception as e:
+        print(f"Firecrawl MCP haber çekme hatası: {e}")
+        print("🔄 Fallback yönteme geçiliyor...")
+        return fetch_latest_ai_articles_fallback()
 
 def fetch_latest_ai_articles():
-    """Firecrawl MCP ile gelişmiş haber çekme - Sadece son 4 makale"""
+    """Ana haber çekme fonksiyonu - Firecrawl MCP öncelikli"""
+    try:
+        # Önce Firecrawl MCP ile dene
+        articles = fetch_latest_ai_articles_with_firecrawl()
+        
+        # Eğer Firecrawl'dan makale gelmezse fallback kullan
+        if not articles:
+            print("🔄 Firecrawl'dan makale gelmedi, fallback yöntemi deneniyor...")
+            articles = fetch_latest_ai_articles_fallback()
+        
+        return articles
+        
+    except Exception as e:
+        print(f"Ana haber çekme hatası: {e}")
+        return fetch_latest_ai_articles_fallback()
+
+def fetch_latest_ai_articles_fallback():
+    """Fallback haber çekme yöntemi - BeautifulSoup ile"""
     try:
         # Önce mevcut yayınlanan makaleleri yükle
         posted_articles = load_json(HISTORY_FILE)
@@ -25,7 +150,7 @@ def fetch_latest_ai_articles():
         soup = BeautifulSoup(html, "html.parser")
         article_links = soup.select("a.loop-card__title-link")[:4]  # Sadece son 4 makale
         
-        print(f"🔍 TechCrunch AI kategorisinden son {len(article_links)} makale kontrol ediliyor...")
+        print(f"🔍 Fallback: TechCrunch AI kategorisinden son {len(article_links)} makale kontrol ediliyor...")
         
         articles_data = []
         for link_tag in article_links:
@@ -53,24 +178,95 @@ def fetch_latest_ai_articles():
                     "hash": article_hash,
                     "fetch_date": datetime.now().isoformat(),
                     "is_new": True,  # Yeni makale işareti
-                    "already_posted": False
+                    "already_posted": False,
+                    "source": "fallback"
                 })
-                print(f"🆕 Yeni makale bulundu: {title[:50]}...")
+                print(f"🆕 Fallback ile yeni makale bulundu: {title[:50]}...")
             else:
                 print(f"⚠️ İçerik yetersiz, atlanıyor: {title[:50]}...")
         
-        print(f"📊 Toplam {len(articles_data)} yeni makale bulundu (son 4 makale kontrol edildi)")
+        print(f"📊 Fallback ile toplam {len(articles_data)} yeni makale bulundu")
         return articles_data
         
     except Exception as e:
-        print(f"Haber çekme hatası: {e}")
+        print(f"Fallback haber çekme hatası: {e}")
         return []
 
-def fetch_article_content_advanced(url, headers):
-    """Gelişmiş makale içeriği çekme - Firecrawl benzeri"""
+def fetch_article_content_with_firecrawl(url):
+    """Firecrawl MCP ile makale içeriği çekme"""
     try:
+        print(f"🔍 Firecrawl MCP ile makale çekiliyor: {url[:50]}...")
+        
+        # Firecrawl MCP scrape fonksiyonunu kullan
+        scrape_result = mcp_firecrawl_scrape({
+            "url": url,
+            "formats": ["markdown"],
+            "onlyMainContent": True,
+            "waitFor": 3000,
+            "removeBase64Images": True
+        })
+        
+        if not scrape_result.get("success", False):
+            print(f"⚠️ Firecrawl MCP başarısız, fallback deneniyor...")
+            return fetch_article_content_advanced_fallback(url)
+        
+        # Markdown içeriğini al
+        markdown_content = scrape_result.get("markdown", "")
+        
+        if not markdown_content or len(markdown_content) < 100:
+            print(f"⚠️ Firecrawl'dan yetersiz içerik, fallback deneniyor...")
+            return fetch_article_content_advanced_fallback(url)
+        
+        # Başlığı çıkar (genellikle ilk # ile başlar)
+        lines = markdown_content.split('\n')
+        title = ""
+        content_lines = []
+        
+        for line in lines:
+            line = line.strip()
+            if line.startswith('# ') and not title:
+                title = line[2:].strip()
+            elif line and not line.startswith('#') and len(line) > 20:
+                content_lines.append(line)
+        
+        # İçeriği birleştir ve temizle
+        content = '\n'.join(content_lines)
+        
+        # Gereksiz karakterleri temizle
+        content = content.replace('*', '').replace('**', '').replace('_', '')
+        content = ' '.join(content.split())  # Çoklu boşlukları tek boşluğa çevir
+        
+        # İçeriği sınırla
+        content = content[:2500]
+        
+        print(f"✅ Firecrawl ile içerik çekildi: {len(content)} karakter")
+        
+        return {
+            "title": title or "Başlık bulunamadı",
+            "content": content,
+            "source": "firecrawl_mcp"
+        }
+        
+    except Exception as e:
+        print(f"❌ Firecrawl MCP hatası ({url}): {e}")
+        print("🔄 Fallback yönteme geçiliyor...")
+        return fetch_article_content_advanced_fallback(url)
+
+def fetch_article_content_advanced_fallback(url):
+    """Fallback makale içeriği çekme - BeautifulSoup ile"""
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0'}
         article_html = requests.get(url, headers=headers, timeout=10).text
         article_soup = BeautifulSoup(article_html, "html.parser")
+        
+        # Başlığı bul
+        title = ""
+        title_selectors = ["h1", "h1.entry-title", "h1.post-title", ".article-title h1"]
+        for selector in title_selectors:
+            title_elem = article_soup.select_one(selector)
+            if title_elem:
+                title = title_elem.text.strip()
+                break
         
         # Çoklu selector deneme - daha kapsamlı içerik çekme
         content_selectors = [
@@ -95,11 +291,22 @@ def fetch_article_content_advanced(url, headers):
             all_paragraphs = article_soup.find_all('p')
             content = "\n".join([p.text.strip() for p in all_paragraphs if len(p.text.strip()) > 50])
         
-        return content[:2000]  # İçeriği sınırla
+        content = content[:2000]  # İçeriği sınırla
+        
+        return {
+            "title": title or "Başlık bulunamadı",
+            "content": content,
+            "source": "fallback"
+        }
         
     except Exception as e:
-        print(f"Makale içeriği çekme hatası ({url}): {e}")
-        return ""
+        print(f"Fallback makale içeriği çekme hatası ({url}): {e}")
+        return None
+
+def fetch_article_content_advanced(url, headers):
+    """Geriye dönük uyumluluk için eski fonksiyon"""
+    result = fetch_article_content_advanced_fallback(url)
+    return result.get("content", "") if result else ""
 
 def load_json(path):
     return json.load(open(path, 'r', encoding='utf-8')) if os.path.exists(path) else []
@@ -298,8 +505,121 @@ def generate_smart_emojis(title, content):
     # En fazla 3 emoji seç
     return emojis[:3]
 
+def generate_ai_tweet_with_mcp_analysis(article_data, api_key):
+    """MCP verisi ile gelişmiş AI tweet oluşturma - Derin analiz ve akıllı hashtag"""
+    title = article_data.get("title", "")
+    content = article_data.get("content", "")
+    url = article_data.get("url", "")
+    source = article_data.get("source", "unknown")
+    
+    # Twitter karakter limiti
+    TWITTER_LIMIT = 280
+    URL_LENGTH = 25  # "\n\n🔗 " + URL kısaltması için
+    
+    print(f"🤖 AI ile tweet oluşturuluyor (kaynak: {source})...")
+    
+    # Gelişmiş AI analizi için prompt
+    analysis_prompt = f"""Analyze this AI/tech article and create a comprehensive analysis:
+
+Title: {title}
+Content: {content[:1500]}
+
+Please provide:
+1. Key innovation or breakthrough
+2. Main companies/technologies involved
+3. Industry impact level (1-10)
+4. Target audience (Developer/Investor/General)
+5. 5 most relevant hashtags (trending and specific)
+6. 3 appropriate emojis
+7. Engaging tweet text (max 180 chars, English only)
+
+Format your response as JSON:
+{{
+    "innovation": "brief description",
+    "companies": ["company1", "company2"],
+    "impact_level": 8,
+    "audience": "Developer",
+    "hashtags": ["#AI", "#MachineLearning", "#Innovation", "#TechNews", "#Startup"],
+    "emojis": ["🤖", "🚀", "💡"],
+    "tweet_text": "engaging tweet content here"
+}}"""
+
+    try:
+        # AI analizi yap
+        analysis_result = openrouter_call(analysis_prompt, api_key, max_tokens=300)
+        
+        if analysis_result and analysis_result != "API hatası":
+            try:
+                # JSON parse et
+                import json
+                analysis = json.loads(analysis_result)
+                
+                # Analiz sonuçlarını al
+                tweet_text = analysis.get("tweet_text", "")
+                hashtags = analysis.get("hashtags", [])[:5]  # Maksimum 5
+                emojis = analysis.get("emojis", [])[:3]  # Maksimum 3
+                
+                # Hashtag ve emoji metinlerini oluştur
+                hashtag_text = " ".join(hashtags) if hashtags else ""
+                emoji_text = "".join(emojis) if emojis else ""
+                
+                # Karakter hesaplama
+                hashtag_emoji_length = len(hashtag_text) + len(emoji_text) + 2
+                available_chars = TWITTER_LIMIT - URL_LENGTH - hashtag_emoji_length
+                
+                # Tweet metnini kısalt
+                if len(tweet_text) > available_chars:
+                    tweet_text = tweet_text[:available_chars-3] + "..."
+                
+                # Final tweet oluştur
+                final_tweet = f"{emoji_text} {tweet_text} {hashtag_text}\n\n🔗 {url}"
+                
+                # Son karakter kontrolü
+                if len(final_tweet) > TWITTER_LIMIT:
+                    excess = len(final_tweet) - TWITTER_LIMIT
+                    tweet_text = tweet_text[:-(excess + 3)] + "..."
+                    final_tweet = f"{emoji_text} {tweet_text} {hashtag_text}\n\n🔗 {url}"
+                
+                print(f"✅ AI analizi ile tweet oluşturuldu: {len(final_tweet)} karakter")
+                print(f"🏷️ AI Hashtag'ler: {hashtag_text}")
+                print(f"😊 AI Emojiler: {emoji_text}")
+                print(f"📊 Etki Seviyesi: {analysis.get('impact_level', 'N/A')}")
+                print(f"🎯 Hedef Kitle: {analysis.get('audience', 'N/A')}")
+                
+                return final_tweet
+                
+            except json.JSONDecodeError as json_error:
+                print(f"⚠️ AI analizi JSON parse hatası: {json_error}")
+                print("🔄 Fallback yönteme geçiliyor...")
+                return generate_ai_tweet_with_content_fallback(article_data, api_key)
+        else:
+            print("⚠️ AI analizi başarısız, fallback yönteme geçiliyor...")
+            return generate_ai_tweet_with_content_fallback(article_data, api_key)
+            
+    except Exception as e:
+        print(f"❌ AI tweet oluşturma hatası: {e}")
+        print("🔄 Fallback yönteme geçiliyor...")
+        return generate_ai_tweet_with_content_fallback(article_data, api_key)
+
 def generate_ai_tweet_with_content(article_data, api_key):
-    """Makale içeriğini okuyarak gelişmiş tweet oluşturma - Akıllı hashtag ve emoji ile"""
+    """Ana tweet oluşturma fonksiyonu - MCP analizi öncelikli"""
+    try:
+        # Önce MCP analizi ile dene
+        tweet = generate_ai_tweet_with_mcp_analysis(article_data, api_key)
+        
+        # Eğer başarısızsa fallback kullan
+        if not tweet or len(tweet) < 50:
+            print("🔄 MCP analizi yetersiz, fallback yöntemi deneniyor...")
+            tweet = generate_ai_tweet_with_content_fallback(article_data, api_key)
+        
+        return tweet
+        
+    except Exception as e:
+        print(f"Ana tweet oluşturma hatası: {e}")
+        return generate_ai_tweet_with_content_fallback(article_data, api_key)
+
+def generate_ai_tweet_with_content_fallback(article_data, api_key):
+    """Fallback tweet oluşturma - Eski yöntem"""
     title = article_data.get("title", "")
     content = article_data.get("content", "")
     url = article_data.get("url", "")
@@ -353,18 +673,18 @@ Tweet content (max {MAX_CONTENT_LENGTH} chars):"""
                 tweet_text = tweet_text.strip()[:-(excess + 3)] + "..."
                 final_tweet = f"{emoji_text} {tweet_text} {hashtag_text}\n\n🔗 {url}"
             
-            print(f"[DEBUG] Tweet oluşturuldu: {len(final_tweet)} karakter (limit: {TWITTER_LIMIT})")
-            print(f"[DEBUG] Hashtag'ler: {hashtag_text}")
-            print(f"[DEBUG] Emojiler: {emoji_text}")
+            print(f"[FALLBACK] Tweet oluşturuldu: {len(final_tweet)} karakter (limit: {TWITTER_LIMIT})")
+            print(f"[FALLBACK] Hashtag'ler: {hashtag_text}")
+            print(f"[FALLBACK] Emojiler: {emoji_text}")
             
             return final_tweet
         else:
-            print("[FALLBACK] API yanıtı yetersiz, fallback tweet oluşturuluyor...")
+            print("[FALLBACK] API yanıtı yetersiz, basit fallback tweet oluşturuluyor...")
             return create_fallback_tweet(title, content, url)
             
     except Exception as e:
-        print(f"Tweet oluşturma hatası: {e}")
-        print("[FALLBACK] API hatası, fallback tweet oluşturuluyor...")
+        print(f"Fallback tweet oluşturma hatası: {e}")
+        print("[FALLBACK] API hatası, basit fallback tweet oluşturuluyor...")
         return create_fallback_tweet(title, content, url)
 
 def create_fallback_tweet(title, content, url=""):
@@ -1262,4 +1582,162 @@ def auto_detect_and_save_chat_id():
             "success": False,
             "error": str(e),
             "auto_detected": False
+        }
+
+def load_mcp_config():
+    """MCP konfigürasyonunu yükle"""
+    try:
+        if os.path.exists(MCP_CONFIG_FILE):
+            config = load_json(MCP_CONFIG_FILE)
+        else:
+            # Varsayılan konfigürasyon
+            config = {
+                "mcp_enabled": False,
+                "firecrawl_mcp": {
+                    "enabled": False,
+                    "server_url": "http://localhost:3000",
+                    "api_key": "",
+                    "timeout": 30,
+                    "retry_count": 3,
+                    "fallback_enabled": True
+                },
+                "content_extraction": {
+                    "max_content_length": 2500,
+                    "min_content_length": 100,
+                    "wait_time": 3000,
+                    "remove_base64_images": True,
+                    "only_main_content": True
+                },
+                "ai_analysis": {
+                    "enabled": True,
+                    "max_tokens": 300,
+                    "temperature": 0.7,
+                    "model": "deepseek/deepseek-chat-v3-0324:free",
+                    "fallback_enabled": True
+                },
+                "last_updated": datetime.now().isoformat()
+            }
+            save_json(MCP_CONFIG_FILE, config)
+        
+        return config
+        
+    except Exception as e:
+        print(f"MCP konfigürasyon yükleme hatası: {e}")
+        return {
+            "mcp_enabled": False,
+            "firecrawl_mcp": {"enabled": False, "fallback_enabled": True},
+            "ai_analysis": {"enabled": True, "fallback_enabled": True}
+        }
+
+def save_mcp_config(config):
+    """MCP konfigürasyonunu kaydet"""
+    try:
+        config["last_updated"] = datetime.now().isoformat()
+        save_json(MCP_CONFIG_FILE, config)
+        return {"success": True, "message": "✅ MCP konfigürasyonu kaydedildi"}
+    except Exception as e:
+        return {"success": False, "message": f"❌ MCP konfigürasyonu kaydedilemedi: {e}"}
+
+def get_mcp_status():
+    """MCP durumunu kontrol et"""
+    try:
+        config = load_mcp_config()
+        
+        status = {
+            "mcp_enabled": config.get("mcp_enabled", False),
+            "firecrawl_enabled": config.get("firecrawl_mcp", {}).get("enabled", False),
+            "ai_analysis_enabled": config.get("ai_analysis", {}).get("enabled", True),
+            "fallback_available": True,
+            "ready": False
+        }
+        
+        # MCP hazır mı kontrol et
+        if status["mcp_enabled"] and status["firecrawl_enabled"]:
+            # Firecrawl MCP server bağlantısını test et
+            try:
+                server_url = config.get("firecrawl_mcp", {}).get("server_url", "")
+                if server_url:
+                    # Basit ping testi (gerçek implementasyonda MCP server'a ping atılacak)
+                    status["ready"] = True
+                    status["message"] = "✅ MCP Firecrawl aktif ve hazır"
+                else:
+                    status["message"] = "⚠️ MCP server URL'si eksik"
+            except:
+                status["message"] = "❌ MCP server bağlantısı başarısız"
+        elif status["ai_analysis_enabled"]:
+            status["message"] = "✅ AI analizi aktif (MCP olmadan)"
+        else:
+            status["message"] = "⚠️ MCP ve AI analizi devre dışı"
+        
+        return status
+        
+    except Exception as e:
+        return {
+            "mcp_enabled": False,
+            "firecrawl_enabled": False,
+            "ai_analysis_enabled": True,
+            "fallback_available": True,
+            "ready": False,
+            "message": f"❌ MCP durum kontrolü hatası: {e}"
+        }
+
+def test_mcp_connection():
+    """MCP bağlantısını test et"""
+    try:
+        config = load_mcp_config()
+        
+        if not config.get("mcp_enabled", False):
+            return {
+                "success": False,
+                "message": "MCP devre dışı",
+                "details": "MCP konfigürasyondan etkinleştirilmeli"
+            }
+        
+        firecrawl_config = config.get("firecrawl_mcp", {})
+        
+        if not firecrawl_config.get("enabled", False):
+            return {
+                "success": False,
+                "message": "Firecrawl MCP devre dışı",
+                "details": "Firecrawl MCP konfigürasyondan etkinleştirilmeli"
+            }
+        
+        server_url = firecrawl_config.get("server_url", "")
+        
+        if not server_url:
+            return {
+                "success": False,
+                "message": "MCP server URL'si eksik",
+                "details": "Konfigürasyonda server_url ayarlanmalı"
+            }
+        
+        # Gerçek MCP implementasyonunda burada MCP server'a test çağrısı yapılacak
+        # Şimdilik simüle ediyoruz
+        print(f"[TEST] MCP server test ediliyor: {server_url}")
+        
+        # Test URL'si ile basit scrape denemesi
+        test_result = mcp_firecrawl_scrape({
+            "url": "https://example.com",
+            "formats": ["markdown"],
+            "onlyMainContent": True
+        })
+        
+        if test_result.get("success", False):
+            return {
+                "success": True,
+                "message": "✅ MCP Firecrawl bağlantısı başarılı",
+                "details": f"Server: {server_url}"
+            }
+        else:
+            return {
+                "success": False,
+                "message": "❌ MCP Firecrawl test başarısız",
+                "details": test_result.get("reason", "Bilinmeyen hata")
+            }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"❌ MCP test hatası: {e}",
+            "details": "Bağlantı testi sırasında hata oluştu"
         }

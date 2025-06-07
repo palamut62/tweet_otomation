@@ -12,7 +12,8 @@ from utils import (
     load_automation_settings, save_automation_settings, get_automation_status,
     update_scheduler_settings, validate_automation_settings,
     send_telegram_notification, test_telegram_connection, get_telegram_chat_id,
-    check_telegram_configuration, save_telegram_chat_id, auto_detect_and_save_chat_id
+    check_telegram_configuration, save_telegram_chat_id, auto_detect_and_save_chat_id,
+    load_mcp_config, save_mcp_config, get_mcp_status, test_mcp_connection
 )
 
 load_dotenv()
@@ -147,7 +148,7 @@ with st.sidebar:
             weekend_enabled = True
         
         # Ayarları kaydet butonu
-        if st.button("💾 Ayarları Kaydet", type="primary"):
+        if st.button("💾 Ayarları Kaydet", type="primary", key="automation_save_settings"):
             new_settings = {
                 "auto_mode": auto_mode,
                 "min_score": min_score,
@@ -187,7 +188,7 @@ with st.sidebar:
                     st.error(save_result["message"])
         
         # Ayarları sıfırla butonu
-        if st.button("🔄 Varsayılan Ayarlara Dön", type="secondary"):
+        if st.button("🔄 Varsayılan Ayarlara Dön", type="secondary", key="automation_reset_defaults"):
             default_settings = {
                 "auto_mode": False,
                 "min_score": 5,
@@ -261,7 +262,7 @@ with st.sidebar:
         
         with col2:
             # Otomatik Chat ID tespit butonu
-            if bot_token and st.button("🔍 Chat ID Bul & Kaydet", help="Otomatik chat ID tespit et ve kaydet"):
+            if bot_token and st.button("🔍 Chat ID Bul & Kaydet", help="Otomatik chat ID tespit et ve kaydet", key="telegram_auto_detect_chat_id"):
                 with st.spinner("Chat ID tespit ediliyor ve kaydediliyor..."):
                     result = auto_detect_and_save_chat_id()
                     
@@ -298,10 +299,10 @@ with st.sidebar:
             manual_bot_token = st.text_input(
                 "🤖 Bot Token (Manuel)",
                 value=settings_bot_token,
-                type="password",
-                help="@BotFather'dan aldığınız bot token'ı"
-            )
-            
+            type="password",
+            help="@BotFather'dan aldığınız bot token'ı"
+        )
+        
             if manual_bot_token != settings_bot_token:
                 bot_token = manual_bot_token
         
@@ -315,7 +316,7 @@ with st.sidebar:
                 help="Farklı bir chat ID kullanmak istiyorsanız"
             )
             
-            if new_chat_id != current_chat_id and st.button("💾 Chat ID'yi Güncelle"):
+            if new_chat_id != current_chat_id and st.button("💾 Chat ID'yi Güncelle", key="telegram_update_chat_id"):
                 save_result = save_telegram_chat_id(new_chat_id)
                 if save_result["success"]:
                     st.success(save_result["message"])
@@ -324,7 +325,7 @@ with st.sidebar:
                     st.error(f"❌ {save_result['error']}")
         
         # Test butonu
-        if bot_token and current_chat_id and st.button("🧪 Bağlantıyı Test Et"):
+        if bot_token and current_chat_id and st.button("🧪 Bağlantıyı Test Et", key="telegram_test_connection"):
             with st.spinner("Test mesajı gönderiliyor..."):
                 result = test_telegram_connection()
                 if result["success"]:
@@ -333,7 +334,7 @@ with st.sidebar:
                     st.error(f"❌ Test başarısız: {result['error']}")
         
         # Ayarları kaydet
-        if st.button("💾 Telegram Ayarlarını Kaydet"):
+        if st.button("💾 Telegram Ayarlarını Kaydet", key="telegram_save_settings"):
             telegram_settings = current_settings.copy()
             telegram_settings.update({
                 "telegram_notifications": telegram_enabled
@@ -351,15 +352,15 @@ with st.sidebar:
                 st.error(f"❌ Kaydetme hatası: {save_result['message']}")
         
         # Telegram kurulum rehberi
-        if st.button("📖 Kurulum Rehberini Göster"):
+        if st.button("📖 Kurulum Rehberini Göster", key="telegram_show_guide"):
             st.info("""
             **🚀 Hızlı Kurulum (Önerilen):**
             
             1. **Bot Oluşturma:**
-               - Telegram'da @BotFather'a mesaj gönderin
-               - `/newbot` komutunu kullanın
-               - Bot adını ve kullanıcı adını belirleyin
-               - Bot token'ınızı kopyalayın
+            - Telegram'da @BotFather'a mesaj gönderin
+            - `/newbot` komutunu kullanın
+            - Bot adını ve kullanıcı adını belirleyin
+            - Bot token'ınızı kopyalayın
             
             2. **.env Dosyası Ayarlama:**
                - Proje klasöründeki .env dosyasını açın
@@ -377,7 +378,7 @@ with st.sidebar:
             
             4. **Test:**
                - "🧪 Bağlantıyı Test Et" butonuna tıklayın
-               - Test mesajını Telegram'da kontrol edin
+            - Test mesajını Telegram'da kontrol edin
             
             **💡 Avantajlar:**
             - Chat ID environment variable'da saklanmaz (daha esnek)
@@ -394,7 +395,7 @@ with st.sidebar:
     
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("▶️ Otomatik Başlat", help="Otomatik haber kontrolü ve tweet oluşturma"):
+        if st.button("▶️ Otomatik Başlat", help="Otomatik haber kontrolü ve tweet oluşturma", key="scheduler_auto_start"):
             with st.spinner("Otomatik işlem başlatılıyor..."):
                 try:
                     # Scheduler fonksiyonunu doğrudan çağır
@@ -417,7 +418,7 @@ with st.sidebar:
                     st.error(f"❌ Hata: {str(e)}")
     
     with col2:
-        if st.button("⏯️ Tek Kontrol", help="Bir kez haber kontrolü yap"):
+        if st.button("⏯️ Tek Kontrol", help="Bir kez haber kontrolü yap", key="scheduler_single_check"):
             with st.spinner("Haberler kontrol ediliyor..."):
                 try:
                     # Sadece haber çekme işlemi
@@ -464,7 +465,7 @@ with st.sidebar:
     st.header("🗂️ Veri Yönetimi")
     
     # Bekleyen tweet'leri temizle
-    if st.button("🧹 Bekleyen Tweet'leri Temizle", type="secondary"):
+    if st.button("🧹 Bekleyen Tweet'leri Temizle", type="secondary", key="data_clear_pending"):
         with st.spinner("Bekleyen tweet'ler temizleniyor..."):
             result = clear_pending_tweets()
             if result["success"]:
@@ -477,7 +478,7 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("⚠️ **Dikkat: Geri alınamaz işlemler**")
     
-    if st.button("🗑️ TÜM VERİLERİ SIFIRLA", type="primary"):
+    if st.button("🗑️ TÜM VERİLERİ SIFIRLA", type="primary", key="data_reset_all"):
         # Onay modalı
         if st.session_state.get('confirm_reset', False):
             with st.spinner("Tüm veriler sıfırlanıyor..."):
@@ -496,7 +497,7 @@ with st.sidebar:
     
     # Onay iptal butonu
     if st.session_state.get('confirm_reset', False):
-        if st.button("❌ İptal Et"):
+        if st.button("❌ İptal Et", key="data_cancel_reset"):
             st.session_state['confirm_reset'] = False
             st.rerun()
     
@@ -509,14 +510,18 @@ with st.sidebar:
                 if article.get('tweet_url'):
                     st.markdown(f"[Tweet'i Görüntüle]({article['tweet_url']})")
 
-# Ana içerik alanları
-col1, col2 = st.columns([2, 1])
+# Ana içerik alanları - Sekme yapısı
+tab1, tab2, tab3 = st.tabs(["📰 Haber Yönetimi", "⚙️ MCP Konfigürasyonu", "📊 Analiz & Raporlar"])
+
+with tab1:
+    # Haber yönetimi sekmesi
+    col1, col2 = st.columns([2, 1])
 
 with col1:
     st.header("📰 Yeni Haberler")
     
     # Haber çekme butonu
-    if st.button("🔄 Haberleri Yenile", type="primary"):
+    if st.button("🔄 Haberleri Yenile", type="primary", key="news_refresh"):
         with st.spinner("Haberler çekiliyor ve tekrar kontrolü yapılıyor..."):
             # Tekrarlanan makaleleri temizle
             cleaned_count = check_duplicate_articles()
@@ -725,27 +730,406 @@ with col2:
     else:
         st.info("📭 Henüz paylaşılan tweet yok")
 
-# Alt kısım - Toplu işlemler
-st.header("🔧 Toplu İşlemler")
+with tab2:
+    # MCP Konfigürasyon sekmesi
+    st.header("🔧 MCP (Model Context Protocol) Konfigürasyonu")
+    
+    # MCP durumu
+    mcp_status = get_mcp_status()
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        if mcp_status["ready"]:
+            st.success(mcp_status["message"])
+        elif mcp_status["mcp_enabled"]:
+            st.warning(mcp_status["message"])
+        else:
+            st.info(mcp_status["message"])
+    
+    with col2:
+        if st.button("🧪 MCP Bağlantısını Test Et", key="mcp_test_connection"):
+            with st.spinner("MCP bağlantısı test ediliyor..."):
+                test_result = test_mcp_connection()
+                if test_result["success"]:
+                    st.success(test_result["message"])
+                    st.info(test_result["details"])
+                else:
+                    st.error(test_result["message"])
+                    st.warning(test_result["details"])
+    
+    # MCP ayarları
+    st.subheader("⚙️ MCP Ayarları")
+    
+    # Mevcut konfigürasyonu yükle
+    mcp_config = load_mcp_config()
+    
+    # Ana MCP ayarları
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**🔧 Genel MCP Ayarları**")
+        
+        mcp_enabled = st.checkbox(
+            "🔌 MCP Etkin",
+            value=mcp_config.get("mcp_enabled", False),
+            help="Model Context Protocol desteğini etkinleştir"
+        )
+        
+        firecrawl_enabled = st.checkbox(
+            "🔥 Firecrawl MCP Etkin",
+            value=mcp_config.get("firecrawl_mcp", {}).get("enabled", False),
+            help="Firecrawl MCP ile gelişmiş web scraping",
+            disabled=not mcp_enabled
+        )
+        
+        ai_analysis_enabled = st.checkbox(
+            "🤖 AI Analizi Etkin",
+            value=mcp_config.get("ai_analysis", {}).get("enabled", True),
+            help="AI ile gelişmiş tweet ve hashtag analizi"
+        )
+    
+    with col2:
+        st.markdown("**🌐 Firecrawl MCP Ayarları**")
+        
+        server_url = st.text_input(
+            "🖥️ MCP Server URL",
+            value=mcp_config.get("firecrawl_mcp", {}).get("server_url", "http://localhost:3000"),
+            help="Firecrawl MCP server adresi",
+            disabled=not firecrawl_enabled
+        )
+        
+        api_key = st.text_input(
+            "🔑 Firecrawl API Key",
+            value=mcp_config.get("firecrawl_mcp", {}).get("api_key", ""),
+            type="password",
+            help="Firecrawl API anahtarı (opsiyonel)",
+            disabled=not firecrawl_enabled
+        )
+        
+        timeout = st.number_input(
+            "⏱️ Timeout (saniye)",
+            min_value=10, max_value=120,
+            value=mcp_config.get("firecrawl_mcp", {}).get("timeout", 30),
+            help="MCP çağrıları için timeout süresi",
+            disabled=not firecrawl_enabled
+        )
+        
+        retry_count = st.number_input(
+            "🔄 Yeniden Deneme Sayısı",
+            min_value=1, max_value=10,
+            value=mcp_config.get("firecrawl_mcp", {}).get("retry_count", 3),
+            help="Başarısız çağrılar için yeniden deneme sayısı",
+            disabled=not firecrawl_enabled
+        )
+    
+    # İçerik çıkarma ayarları
+    st.subheader("📄 İçerik Çıkarma Ayarları")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        max_content_length = st.number_input(
+            "📏 Maksimum İçerik Uzunluğu",
+            min_value=500, max_value=10000,
+            value=mcp_config.get("content_extraction", {}).get("max_content_length", 2500),
+            help="Çıkarılacak maksimum karakter sayısı"
+        )
+        
+        min_content_length = st.number_input(
+            "📐 Minimum İçerik Uzunluğu",
+            min_value=50, max_value=1000,
+            value=mcp_config.get("content_extraction", {}).get("min_content_length", 100),
+            help="Geçerli sayılacak minimum karakter sayısı"
+        )
+    
+    with col2:
+        wait_time = st.number_input(
+            "⏳ Sayfa Yükleme Bekleme Süresi (ms)",
+            min_value=1000, max_value=10000,
+            value=mcp_config.get("content_extraction", {}).get("wait_time", 3000),
+            help="Dinamik içerik için bekleme süresi"
+        )
+        
+        only_main_content = st.checkbox(
+            "📰 Sadece Ana İçerik",
+            value=mcp_config.get("content_extraction", {}).get("only_main_content", True),
+            help="Navigasyon, footer vb. kısımları filtrele"
+        )
+        
+        remove_base64_images = st.checkbox(
+            "🖼️ Base64 Resimleri Kaldır",
+            value=mcp_config.get("content_extraction", {}).get("remove_base64_images", True),
+            help="Base64 kodlu resimleri içerikten çıkar"
+        )
+    
+    # AI analizi ayarları
+    st.subheader("🤖 AI Analizi Ayarları")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        ai_max_tokens = st.number_input(
+            "🎯 Maksimum Token",
+            min_value=100, max_value=1000,
+            value=mcp_config.get("ai_analysis", {}).get("max_tokens", 300),
+            help="AI analizi için maksimum token sayısı",
+            disabled=not ai_analysis_enabled
+        )
+        
+        ai_temperature = st.slider(
+            "🌡️ Temperature",
+            min_value=0.0, max_value=1.0, step=0.1,
+            value=mcp_config.get("ai_analysis", {}).get("temperature", 0.7),
+            help="AI yaratıcılık seviyesi (0=deterministik, 1=yaratıcı)",
+            disabled=not ai_analysis_enabled
+        )
+    
+    with col2:
+        ai_model = st.selectbox(
+            "🧠 AI Model",
+            options=[
+                "deepseek/deepseek-chat-v3-0324:free",
+                "meta-llama/llama-3.2-3b-instruct:free",
+                "microsoft/phi-3-mini-128k-instruct:free",
+                "google/gemma-2-9b-it:free"
+            ],
+            index=0,
+            help="Kullanılacak AI modeli",
+            disabled=not ai_analysis_enabled
+        )
+        
+        fallback_enabled = st.checkbox(
+            "🔄 Fallback Etkin",
+            value=mcp_config.get("ai_analysis", {}).get("fallback_enabled", True),
+            help="AI analizi başarısızsa eski yöntemi kullan",
+            disabled=not ai_analysis_enabled
+        )
+    
+    # Ayarları kaydet
+    st.markdown("---")
+    
+    col1, col2, col3 = st.columns([1, 1, 1])
+    
+    with col1:
+        if st.button("💾 MCP Ayarlarını Kaydet", type="primary", key="mcp_save_settings"):
+            new_config = {
+                "mcp_enabled": mcp_enabled,
+                "firecrawl_mcp": {
+                    "enabled": firecrawl_enabled,
+                    "server_url": server_url.strip(),
+                    "api_key": api_key.strip(),
+                    "timeout": timeout,
+                    "retry_count": retry_count,
+                    "fallback_enabled": True
+                },
+                "content_extraction": {
+                    "max_content_length": max_content_length,
+                    "min_content_length": min_content_length,
+                    "wait_time": wait_time,
+                    "remove_base64_images": remove_base64_images,
+                    "only_main_content": only_main_content
+                },
+                "ai_analysis": {
+                    "enabled": ai_analysis_enabled,
+                    "max_tokens": ai_max_tokens,
+                    "temperature": ai_temperature,
+                    "model": ai_model,
+                    "fallback_enabled": fallback_enabled
+                }
+            }
+            
+            save_result = save_mcp_config(new_config)
+            if save_result["success"]:
+                st.success(save_result["message"])
+                st.rerun()
+            else:
+                st.error(save_result["message"])
+    
+    with col2:
+        if st.button("🔄 Varsayılan Ayarlara Dön", key="mcp_reset_defaults"):
+            default_config = {
+                "mcp_enabled": False,
+                "firecrawl_mcp": {
+                    "enabled": False,
+                    "server_url": "http://localhost:3000",
+                    "api_key": "",
+                    "timeout": 30,
+                    "retry_count": 3,
+                    "fallback_enabled": True
+                },
+                "content_extraction": {
+                    "max_content_length": 2500,
+                    "min_content_length": 100,
+                    "wait_time": 3000,
+                    "remove_base64_images": True,
+                    "only_main_content": True
+                },
+                "ai_analysis": {
+                    "enabled": True,
+                    "max_tokens": 300,
+                    "temperature": 0.7,
+                    "model": "deepseek/deepseek-chat-v3-0324:free",
+                    "fallback_enabled": True
+                }
+            }
+            
+            save_result = save_mcp_config(default_config)
+            if save_result["success"]:
+                st.success("✅ Varsayılan ayarlar yüklendi")
+                st.rerun()
+            else:
+                st.error(save_result["message"])
+    
+    with col3:
+        if st.button("📖 MCP Kurulum Rehberi", key="mcp_show_guide"):
+            st.info("""
+            **🚀 MCP (Model Context Protocol) Kurulum Rehberi:**
+            
+            **1. Firecrawl MCP Server Kurulumu:**
+            ```bash
+            # Firecrawl MCP server'ı klonla
+            git clone https://github.com/mendableai/firecrawl-mcp
+            cd firecrawl-mcp
+            
+            # Bağımlılıkları yükle
+            npm install
+            
+            # Server'ı başlat
+            npm start
+            ```
+            
+            **2. Konfigürasyon:**
+            - MCP Etkin: ✅ İşaretle
+            - Firecrawl MCP Etkin: ✅ İşaretle
+            - Server URL: http://localhost:3000 (varsayılan)
+            - API Key: Firecrawl API anahtarınız (opsiyonel)
+            
+            **3. Test:**
+            - "🧪 MCP Bağlantısını Test Et" butonuna tıklayın
+            - Başarılı olursa MCP ile gelişmiş scraping aktif olur
+            
+            **4. Avantajlar:**
+            - 🔥 Firecrawl ile daha kaliteli içerik çıkarma
+            - 🤖 AI ile gelişmiş hashtag ve emoji analizi
+            - 📊 Daha doğru makale skorlama
+            - 🎯 Hedef kitle analizi
+            
+            **5. Fallback:**
+            - MCP başarısız olursa otomatik olarak eski yöntem kullanılır
+            - Hiçbir işlevsellik kaybı olmaz
+            
+            **💡 Not:** MCP olmadan da uygulama tam olarak çalışır!
+            """)
+    
+    # MCP durum özeti
+    st.subheader("📊 MCP Durum Özeti")
+    
+    status_col1, status_col2, status_col3 = st.columns(3)
+    
+    with status_col1:
+        if mcp_status["mcp_enabled"]:
+            st.success("✅ MCP Aktif")
+        else:
+            st.error("❌ MCP Devre Dışı")
+    
+    with status_col2:
+        if mcp_status["firecrawl_enabled"]:
+            st.success("✅ Firecrawl MCP Aktif")
+        else:
+            st.warning("⚠️ Firecrawl MCP Devre Dışı")
+    
+    with status_col3:
+        if mcp_status["ai_analysis_enabled"]:
+            st.success("✅ AI Analizi Aktif")
+        else:
+            st.warning("⚠️ AI Analizi Devre Dışı")
+    
+    # Son güncelleme tarihi
+    last_updated = mcp_config.get("last_updated", "Bilinmiyor")
+    st.caption(f"Son güncelleme: {last_updated[:16] if last_updated != 'Bilinmiyor' else last_updated}")
 
-if st.button("🧹 Eski Kayıtları Temizle"):
-    cleaned = check_duplicate_articles()
-    st.success(f"✅ {cleaned} kayıt temizlendi")
+with tab3:
+    # Analiz ve raporlar sekmesi
+    st.header("📊 Analiz & Raporlar")
+    
+    # İstatistikler
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric("Toplam Paylaşılan", posted_summary["total_posted"])
+    with col2:
+        st.metric("Son 7 Gün", posted_summary["recent_posted"])
+    with col3:
+        st.metric("Bekleyen Tweet", data_stats["pending_tweets"])
+    
+    # Detaylı istatistikler
+    st.subheader("📈 Detaylı İstatistikler")
+    
+    stats_col1, stats_col2 = st.columns(2)
+    
+    with stats_col1:
+        st.markdown("**📊 Veri İstatistikleri:**")
+        st.write(f"• Paylaşılan Makaleler: {data_stats['posted_articles']}")
+        st.write(f"• Bekleyen Tweet'ler: {data_stats['pending_tweets']}")
+        st.write(f"• Paylaşılmış Tweet'ler: {data_stats['posted_tweets_in_pending']}")
+        st.write(f"• Özetler: {data_stats['summaries']}")
+        st.write(f"• Hashtag'ler: {data_stats['hashtags']}")
+        st.write(f"• Hesaplar: {data_stats['accounts']}")
+    
+    with stats_col2:
+        st.markdown("**⚙️ Sistem Durumu:**")
+        st.write(f"• Twitter API: {'✅ Bağlı' if twitter_client else '❌ Bağlı Değil'}")
+        st.write(f"• Telegram: {config_status['message'][:20]}...")
+        st.write(f"• MCP: {mcp_status['message'][:20]}...")
+        st.write(f"• Otomatikleştirme: {automation_status['reason'][:20]}...")
+    
+    # Toplu işlemler
+    st.subheader("🔧 Toplu İşlemler")
 
-if st.button("📄 PDF Raporu Oluştur"):
-    if posted_summary["recent_articles"]:
-        summaries = [article.get('title', 'Tweet') for article in posted_summary["recent_articles"]]
-        pdf_path = create_pdf(summaries)
-        with open(pdf_path, "rb") as f:
-            st.download_button("📥 PDF İndir", f, file_name="tweet_raporu.pdf")
-    else:
-        st.warning("⚠️ Rapor için veri yok")
+    action_col1, action_col2, action_col3 = st.columns(3)
+    
+    with action_col1:
+        if st.button("🧹 Eski Kayıtları Temizle", key="reports_clean_old"):
+            with st.spinner("Eski kayıtlar temizleniyor..."):
+                cleaned = check_duplicate_articles()
+                st.success(f"✅ {cleaned} kayıt temizlendi")
 
-if st.button("🔄 Otomatik İşlem Başlat"):
-    st.info("🚀 Otomatik işlem başlatıldı! Terminal'de `python scheduler.py --once` çalıştırın")
+    with action_col2:
+        if st.button("📄 PDF Raporu Oluştur", key="reports_create_pdf"):
+            if posted_summary["recent_articles"]:
+                with st.spinner("PDF raporu oluşturuluyor..."):
+                    summaries = [article.get('title', 'Tweet') for article in posted_summary["recent_articles"]]
+                    pdf_path = create_pdf(summaries)
+                    with open(pdf_path, "rb") as f:
+                        st.download_button("📥 PDF İndir", f, file_name="tweet_raporu.pdf")
+            else:
+                st.warning("⚠️ Rapor için veri yok")
+
+    with action_col3:
+        if st.button("🔄 Otomatik İşlem Başlat", key="reports_auto_process"):
+            st.info("🚀 Otomatik işlem başlatıldı! Terminal'de `python scheduler.py --once` çalıştırın")
 
 # Footer
 st.markdown("---")
 st.markdown("🤖 **AI Tweet Bot** - Gelişmiş haber takibi ve otomatik tweet paylaşımı")
-st.markdown("💡 **İpucu:** Sadece daha önce paylaşılmamış haberler gösterilir")
-st.markdown("🗂️ **Veri Yönetimi:** Sidebar'dan bekleyen tweet'leri temizleyebilir veya tüm verileri sıfırlayabilirsiniz")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.markdown("**🔥 Yeni Özellikler:**")
+    st.markdown("• MCP (Model Context Protocol) desteği")
+    st.markdown("• Firecrawl ile gelişmiş scraping")
+    st.markdown("• AI ile akıllı hashtag analizi")
+
+with col2:
+    st.markdown("**💡 İpuçları:**")
+    st.markdown("• Sadece yeni haberler gösterilir")
+    st.markdown("• MCP olmadan da tam çalışır")
+    st.markdown("• Fallback sistemi her zaman aktif")
+
+with col3:
+    st.markdown("**🗂️ Veri Yönetimi:**")
+    st.markdown("• Sidebar'dan ayarları yönetin")
+    st.markdown("• MCP sekmesinden konfigürasyon")
+    st.markdown("• Analiz sekmesinden raporlar")

@@ -1,0 +1,26 @@
+{
+  "mcp_enabled": false,
+  "firecrawl_mcp": {
+    "enabled": false,
+    "server_url": "http://localhost:3000",
+    "api_key": "fc-f01e73501efb451ebc166c8cee6cd4e8",
+    "timeout": 30,
+    "retry_count": 3,
+    "fallback_enabled": true
+  },
+  "content_extraction": {
+    "max_content_length": 2500,
+    "min_content_length": 100,
+    "wait_time": 3000,
+    "remove_base64_images": true,
+    "only_main_content": true
+  },
+  "ai_analysis": {
+    "enabled": true,
+    "max_tokens": 300,
+    "temperature": 0.7,
+    "model": "deepseek/deepseek-chat-v3-0324:free",
+    "fallback_enabled": true
+  },
+  "last_updated": "2024-01-01T00:00:00Z"
+} 
